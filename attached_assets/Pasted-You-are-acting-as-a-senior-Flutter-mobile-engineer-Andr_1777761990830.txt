@@ -1,0 +1,189 @@
+You are acting as a senior Flutter mobile engineer, Android release engineer, product owner, QA lead, and Google Play launch assistant.
+
+Project context:
+We are building an offline-first Ethiopian exam grading app called EthioGrade / GradeFlow Ethiopia.
+
+The app’s purpose:
+Help Ethiopian teachers reduce manual grading time by scanning objective answer sheets, detecting answers offline, allowing teacher review/correction, calculating scores, and exporting results. The app must work on low-end Android phones, preferably offline, with a small app size and high teacher trust.
+
+Core user:
+A teacher in Ethiopia who grades multiple classes and wants to save time. The teacher may have unstable internet and a low-end Android phone.
+
+Known validated pain:
+Teachers can spend around 1.5–2 hours grading 10 questions for 40 students manually. The MVP must reduce this burden for objective exams.
+
+Existing product direction:
+Do NOT build a magical full AI grader first. Build a reliable OMR-first grading tool.
+OCR and essay grading are future phases, not the first Play Store release unless already safely implemented.
+
+Main MVP features:
+1. Quick Assessment mode
+   - Teacher can grade without creating a full class/student database.
+   - Teacher enters answer key manually.
+   - Teacher optionally enters expected paper count.
+   - Teacher scans papers.
+   - App calculates result.
+   - Teacher can export or save results.
+
+2. OMR grading
+   - Support one fixed template first: “GradeFlow Bubble 20 v1”.
+   - Detect answers offline.
+   - Classify each question as:
+     - SINGLE
+     - BLANK
+     - MULTIPLE
+     - LOW_CONFIDENCE
+   - Generate reason-coded issues:
+     - TEMPLATE_UNSUPPORTED_QUESTION_COUNT
+     - TEMPLATE_ALIGNMENT_LOW
+     - LOW_OVERALL_CONFIDENCE
+     - QUESTION_REVIEW_REQUIRED
+   - Never silently trust uncertain detection.
+
+3. Teacher review screen
+   - Show captured image.
+   - Show detected answers.
+   - Show score.
+   - Show confidence/issues.
+   - Allow teacher correction.
+   - Allow retake.
+   - Allow manual fallback.
+   - Confirm final result only after teacher review.
+
+4. Results
+   - Show per-paper score.
+   - Allow recalculation if answer key changes.
+   - Export CSV.
+   - Keep Quick Assessment result lightweight.
+   - Avoid requiring student registration for the first release.
+
+5. Offline-first
+   - Core grading must work without internet.
+   - Do not depend on cloud APIs for grading.
+   - Store local data safely.
+   - Avoid unnecessary login for MVP.
+
+6. Low-end Android constraints
+   - Optimize for 2GB RAM Android devices.
+   - Avoid heavy OCR/ML dependencies unless absolutely necessary.
+   - Keep APK/AAB size controlled.
+   - Avoid large bundled models.
+   - Use bounded image decoding and memory-safe processing.
+
+7. Play Store readiness
+   - Prepare Android release build as AAB.
+   - Target current Google Play requirement: targetSdkVersion 35 or higher unless project tooling supports newer safely.
+   - Use minSdk appropriate for low-end Android support, preferably minSdk 26 unless current project requires otherwise.
+   - Configure app name, package id, launcher icon placeholder, versionCode, versionName.
+   - Prepare release signing instructions but do NOT expose secrets.
+   - Produce Play Store listing draft.
+   - Produce privacy policy draft based on actual data collected.
+   - Produce Data Safety form notes based on actual permissions and storage.
+   - Prepare screenshots checklist.
+   - Prepare closed/internal testing checklist.
+   - Do not claim the app is medically, officially government, or school-authority certified.
+   - Do not claim 100% grading accuracy.
+
+Before coding:
+1. Inspect the repository structure.
+2. Identify whether this is Flutter, React Native/Expo, native Android, or another stack.
+3. Find existing grading, OMR, scanning, answer key, quick assessment, result, export, and Android config files.
+4. Summarize what already exists and what is missing.
+5. Do not rewrite the whole app if a working Flutter app already exists.
+6. Preserve existing working flows.
+7. Make minimal, production-safe changes.
+
+Important engineering rules:
+- Do not introduce OCR unless explicitly required and size impact is justified.
+- Do not introduce cloud dependency for core grading.
+- Do not break existing OMR flow.
+- Do not remove teacher review.
+- Do not add login/payment/subscription in this release.
+- Do not add unnecessary backend.
+- Do not hardcode secrets.
+- Do not request dangerous Android permissions unless essential.
+- Prefer Android Photo Picker/camera-safe permission patterns where possible.
+- Keep permissions minimal.
+- Add clear error states for bad scans, low confidence, unsupported templates, and missing answer key.
+
+Deliverables required:
+A. Repository audit
+   - Current stack
+   - Existing features
+   - Missing MVP features
+   - Build blockers
+   - Play Store blockers
+   - App size risks
+   - Permission/privacy risks
+
+B. Implementation
+   - Fix build issues.
+   - Complete missing MVP screens only if needed.
+   - Ensure Quick Assessment flow works end-to-end.
+   - Ensure OMR detection is connected to review and scoring.
+   - Ensure CSV export works.
+   - Ensure answer-key editing and recalculation behavior is safe.
+   - Ensure app works offline.
+   - Ensure release build can be generated.
+
+C. QA
+   - Add or update tests where practical.
+   - Manually test:
+     1. Launch app
+     2. Create quick assessment
+     3. Enter answer key
+     4. Scan/import test image
+     5. Review detected answers
+     6. Correct uncertain answers
+     7. Confirm score
+     8. Export CSV
+     9. Restart app and verify saved state if applicable
+     10. Build release AAB
+
+D. Release assets and documents
+   Create these files in a /release or /docs/release folder:
+   1. PLAY_STORE_RELEASE_CHECKLIST.md
+   2. STORE_LISTING_DRAFT.md
+   3. PRIVACY_POLICY_DRAFT.md
+   4. DATA_SAFETY_NOTES.md
+   5. INTERNAL_TESTING_PLAN.md
+   6. KNOWN_LIMITATIONS.md
+   7. TEACHER_PILOT_SCRIPT.md
+
+Store listing direction:
+App name: EthioGrade or GradeFlow Ethiopia. If package/app name already exists, keep it.
+Short description:
+“Offline exam grading assistant for teachers.”
+
+Full description should explain:
+- Helps teachers grade objective exams faster.
+- Works offline for core grading.
+- Supports fixed-template OMR first.
+- Teacher reviews results before finalizing.
+- Exports results.
+- Built for classroom realities.
+
+Avoid saying:
+- “AI grades everything”
+- “100% accurate”
+- “Official Ethiopian education app”
+- “Replaces teachers”
+- “Works for all exam formats”
+
+Known limitations to include:
+- First release supports objective/bubble-sheet style grading.
+- Works best with the supported GradeFlow Bubble 20 template.
+- Poor lighting, blur, shadows, and misaligned sheets may require teacher review or manual correction.
+- Essay/short-answer OCR grading is not part of the first release unless already implemented and tested.
+
+Final output:
+1. Tell me what you found in the repo.
+2. Tell me what you changed.
+3. Tell me whether the app is ready for:
+   - local debug run
+   - release AAB build
+   - internal testing
+   - Play Store submission
+4. Provide exact commands to run.
+5. Provide any remaining blockers.
+6. Do not mark Play Store submission as complete unless an AAB exists and all required release documents/checklists are ready.

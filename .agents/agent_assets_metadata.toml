@@ -1,0 +1,14 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "2ZSLyV9yHAF0y80VLWMuJ"
+uri = "file://artifacts/mobile/assets/images/icon.png"
+type = "image"
+title = "ethiograde app icon"
+
+[[generated]]
+id = "VGK7lABeAILCkVn9eeHFY"
+uri = "file://artifacts/mobile/assets/images/splash.png"
+type = "image"
+title = "ethiograde splash background"
