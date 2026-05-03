@@ -1,6 +1,13 @@
 import { Share } from 'react-native';
 import type { Assessment } from './types';
 
+function escapeCsvField(value: string): string {
+  if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+  return value;
+}
+
 export function generateCSV(assessment: Assessment): string {
   const rows: string[] = [];
 
@@ -8,11 +15,12 @@ export function generateCSV(assessment: Assessment): string {
     { length: assessment.questionCount },
     (_, i) => `Q${i + 1}`
   );
-  const headers = ['Paper', 'Score', 'Max', 'Percentage', ...questionHeaders];
+  const headers = ['Student Name', 'Student ID', 'Score', 'Max', 'Percentage', ...questionHeaders];
   rows.push(headers.join(','));
 
   const keyRow = [
     'ANSWER KEY',
+    '',
     '',
     '',
     '',
@@ -23,7 +31,8 @@ export function generateCSV(assessment: Assessment): string {
   for (const paper of assessment.papers) {
     if (!paper.reviewComplete) continue;
     const row = [
-      paper.label,
+      escapeCsvField(paper.studentName ?? paper.label),
+      escapeCsvField(paper.studentId ?? ''),
       paper.score.toString(),
       paper.maxScore.toString(),
       `${paper.percentage}%`,

@@ -20,6 +20,8 @@ export interface QuestionDetection {
 export interface PaperResult {
   id: string;
   label: string;
+  studentName?: string;
+  studentId?: string;
   imageUri?: string;
   detections: QuestionDetection[];
   issues: IssueCode[];

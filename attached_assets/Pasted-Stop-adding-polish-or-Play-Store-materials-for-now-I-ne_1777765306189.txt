@@ -1,0 +1,77 @@
+Stop adding polish or Play Store materials for now.
+
+I need you to do a strict product-readiness audit of the EthioGrade app you just built.
+
+Important:
+Do not assume the app is ready because the home screen renders.
+Do not add new features before answering the audit.
+Do not say OMR works unless it is actually tested against image inputs.
+
+Audit the current implementation and report:
+
+1. Stack and structure
+- Is this Expo/React Native or Flutter?
+- List the main app folders and important files.
+- Explain the navigation structure.
+- Confirm whether there are any route conflicts left.
+
+2. Current grading flow
+- Can a teacher create a quick assessment?
+- Can they enter an answer key?
+- Can they scan/import an answer sheet?
+- Can they review detected answers?
+- Can they correct answers?
+- Can they confirm/save a result?
+- Can they export CSV?
+- Does data persist after app restart?
+
+3. OMR truth check
+- Is the OMR detection real image-based bubble detection, or is it simulated/mocked?
+- Show the exact file/function where OMR detection happens.
+- Explain the algorithm in plain language.
+- What inputs does it use?
+- What outputs does it produce?
+- Does it detect SINGLE, BLANK, MULTIPLE, and LOW_CONFIDENCE?
+- Does it produce reason codes?
+- What failure cases are handled?
+
+4. Android readiness
+- Has it been tested on Android device/emulator, not only web preview?
+- Does camera permission work?
+- Does image import work?
+- Does CSV export/share work on Android?
+- Does offline storage work?
+- What Android permissions are requested?
+- Are any permissions unnecessary?
+
+5. Play Store readiness
+- Is there an AAB build command?
+- Is app.json configured correctly?
+- Is package name set?
+- Is versionCode/versionName set?
+- Is target SDK Play Store-ready?
+- Are release docs only drafts or complete?
+- What is still blocking internal testing?
+
+6. Real classroom blockers
+Rank remaining tasks by whether a teacher can actually use the app in class.
+
+My expected priority:
+P1: Student name/student ID entry before confirming result.
+P1: Manual entry mode so teachers can grade without camera.
+P1: Verify real OMR, not fake detection.
+P1: Android device test for camera, storage, CSV export, and offline persistence.
+P2: Grade distribution and median score.
+P3: UI polish and cleanup.
+
+After the audit, implement only the P1 items in this order:
+1. Student name and optional student ID on the Review/Confirm screen.
+2. Add the same fields to saved result and CSV export.
+3. Add Manual Entry mode from the Scan/Quick Assessment flow.
+4. Ensure manual and scanned results use the same result model.
+5. Test TypeScript/build.
+6. Report exact files changed and remaining blockers.
+
+Do not work on Play Store submission yet.
+The goal is not a beautiful demo.
+The goal is a classroom-usable MVP.

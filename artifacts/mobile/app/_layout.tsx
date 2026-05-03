@@ -9,6 +9,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
+import { Platform, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -28,6 +29,7 @@ function RootLayoutNav() {
       <Stack.Screen name="scan" />
       <Stack.Screen name="review" />
       <Stack.Screen name="results" />
+      <Stack.Screen name="manual" />
     </Stack>
   );
 }
@@ -46,7 +48,9 @@ export default function RootLayout() {
     }
   }, [fontsLoaded, fontError]);
 
-  if (!fontsLoaded && !fontError) return null;
+  if (Platform.OS !== 'web' && !fontsLoaded && !fontError) {
+    return <View style={{ flex: 1, backgroundColor: '#F4F1EC' }} />;
+  }
 
   return (
     <SafeAreaProvider>

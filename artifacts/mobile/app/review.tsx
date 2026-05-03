@@ -1,11 +1,11 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   Alert,
-  FlatList,
   Platform,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
   Image,
@@ -42,7 +42,6 @@ function QuestionReviewRow({
 }) {
   const finalAnswer = detection.correctedAnswer !== undefined ? detection.correctedAnswer : detection.detectedAnswer;
   const isCorrect = finalAnswer !== null && finalAnswer === answerKey;
-  const isBlank = finalAnswer === null;
 
   const statusColor =
     detection.status === 'SINGLE' && detection.confidence >= 0.75
@@ -74,7 +73,9 @@ function QuestionReviewRow({
         />
         <View style={styles.keyAnswer}>
           <Text style={[styles.keyLabel, { color: colors.mutedForeground }]}>Key:</Text>
-          <Text style={[styles.keyValue, { color: colors.primary }]}>{answerKey ?? '—'}</Text>
+          <Text style={[styles.keyValue, { color: isCorrect ? colors.success : colors.primary }]}>
+            {answerKey ?? '—'}
+          </Text>
         </View>
       </View>
     </View>
@@ -98,6 +99,8 @@ export default function ReviewScreen() {
   const [localDetections, setLocalDetections] = useState<QuestionDetection[]>(
     paper?.detections ?? []
   );
+  const [studentName, setStudentName] = useState(paper?.studentName ?? '');
+  const [studentId, setStudentId] = useState(paper?.studentId ?? '');
   const [confirming, setConfirming] = useState(false);
 
   const handleCorrect = useCallback((qNum: number, answer: Answer) => {
@@ -130,15 +133,20 @@ export default function ReviewScreen() {
     if (!paper || !currentAssessment) return;
     setConfirming(true);
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    const name = studentName.trim();
+    const sid = studentId.trim();
     const updatedPaper: PaperResult = {
       ...paper,
       detections: localDetections,
+      studentName: name || undefined,
+      studentId: sid || undefined,
+      label: name || paper.label,
     };
     const finalized = applyCorrections(updatedPaper, currentAssessment.answerKey);
     await updatePaper(paper.id, finalized);
     setConfirming(false);
     router.replace('/scan');
-  }, [paper, currentAssessment, localDetections, updatePaper]);
+  }, [paper, currentAssessment, localDetections, updatePaper, studentName, studentId]);
 
   const handleRetake = useCallback(() => {
     router.back();
@@ -171,7 +179,41 @@ export default function ReviewScreen() {
         </View>
       </View>
 
-      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        {/* Student Identity */}
+        <View style={[styles.studentSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.studentSectionTitle, { color: colors.foreground }]}>Student Info</Text>
+          <View style={styles.studentFields}>
+            <View style={styles.studentField}>
+              <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Name</Text>
+              <TextInput
+                style={[styles.fieldInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
+                placeholder="Student name"
+                placeholderTextColor={colors.mutedForeground}
+                value={studentName}
+                onChangeText={setStudentName}
+                returnKeyType="next"
+                maxLength={80}
+                autoCorrect={false}
+              />
+            </View>
+            <View style={styles.studentField}>
+              <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>ID <Text style={{ fontFamily: 'Inter_400Regular', fontSize: 12 }}>(optional)</Text></Text>
+              <TextInput
+                style={[styles.fieldInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
+                placeholder="e.g. STU-001"
+                placeholderTextColor={colors.mutedForeground}
+                value={studentId}
+                onChangeText={setStudentId}
+                returnKeyType="done"
+                maxLength={30}
+                autoCorrect={false}
+                autoCapitalize="characters"
+              />
+            </View>
+          </View>
+        </View>
+
         {paper.imageUri ? (
           <View style={styles.imageWrap}>
             <Image source={{ uri: paper.imageUri }} style={styles.paperImage} resizeMode="contain" />
@@ -268,9 +310,40 @@ const styles = StyleSheet.create({
   scroll: {
     flex: 1,
   },
-  imageWrap: {
+  studentSection: {
     margin: 16,
-    height: 200,
+    marginBottom: 12,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 10,
+  },
+  studentSectionTitle: {
+    fontSize: 13,
+    fontFamily: 'Inter_600SemiBold',
+  },
+  studentFields: {
+    gap: 8,
+  },
+  studentField: {
+    gap: 4,
+  },
+  fieldLabel: {
+    fontSize: 12,
+    fontFamily: 'Inter_500Medium',
+  },
+  fieldInput: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    fontSize: 15,
+    fontFamily: 'Inter_400Regular',
+  },
+  imageWrap: {
+    marginHorizontal: 16,
+    marginBottom: 12,
+    height: 180,
     borderRadius: 12,
     overflow: 'hidden',
   },
@@ -279,8 +352,8 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   issuesBox: {
-    margin: 16,
-    marginTop: 0,
+    marginHorizontal: 16,
+    marginBottom: 8,
     padding: 14,
     borderRadius: 12,
     borderWidth: 1,

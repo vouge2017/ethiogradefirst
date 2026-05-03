@@ -36,7 +36,7 @@ export default function ScanScreen() {
     setProcessing(true);
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-    await new Promise(res => setTimeout(res, 800));
+    await new Promise(res => setTimeout(res, 900));
 
     const paper = runOMRDetection(uri, currentAssessment.answerKey, paperIndex);
     await addPaper(paper);
@@ -55,7 +55,7 @@ export default function ScanScreen() {
 
   const handleCamera = useCallback(async () => {
     if (Platform.OS === 'web') {
-      Alert.alert('Camera not available', 'Use "Import from Gallery" on web.');
+      Alert.alert('Camera not available', 'Use "Import" or "Manual Entry" on web.');
       return;
     }
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -96,6 +96,10 @@ export default function ScanScreen() {
       await processImage(result.assets[0].uri);
     }
   }, [processImage]);
+
+  const handleManualEntry = useCallback(() => {
+    router.push('/manual');
+  }, []);
 
   const handleViewResults = useCallback(() => {
     router.push('/results');
@@ -147,7 +151,7 @@ export default function ScanScreen() {
                 Detecting answers...
               </Text>
               <Text style={[styles.processingHint, { color: colors.mutedForeground }]}>
-                Using GradeFlow Bubble 20 v1 template
+                Note: detection is simulated — review all results carefully
               </Text>
             </View>
           </View>
@@ -163,11 +167,21 @@ export default function ScanScreen() {
                 <Text style={[styles.frameHint, { color: colors.mutedForeground }]}>
                   Position the answer sheet within the frame
                 </Text>
-                <Text style={[styles.templateLabel, { color: colors.accent, backgroundColor: colors.accent + '18' }]}>
-                  GradeFlow Bubble 20 v1
-                </Text>
               </View>
             </View>
+
+            {/* Manual entry option */}
+            <TouchableOpacity
+              onPress={handleManualEntry}
+              activeOpacity={0.8}
+              style={[styles.manualBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+            >
+              <Feather name="edit-3" size={16} color={colors.foreground} />
+              <Text style={[styles.manualBtnText, { color: colors.foreground }]}>
+                Enter answers manually
+              </Text>
+              <Feather name="chevron-right" size={14} color={colors.mutedForeground} />
+            </TouchableOpacity>
 
             <View style={[styles.tipBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <Feather name="sun" size={14} color={colors.mutedForeground} />
@@ -202,7 +216,7 @@ export default function ScanScreen() {
           {currentAssessment.papers.length > 0 && (
             <TouchableOpacity onPress={handleViewResults} style={styles.finishLink}>
               <Text style={[styles.finishLinkText, { color: colors.mutedForeground }]}>
-                Done scanning — view {currentAssessment.papers.length} result{currentAssessment.papers.length !== 1 ? 's' : ''}
+                Done — view {currentAssessment.papers.length} result{currentAssessment.papers.length !== 1 ? 's' : ''}
               </Text>
               <Feather name="chevron-right" size={14} color={colors.mutedForeground} />
             </TouchableOpacity>
@@ -262,12 +276,14 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_600SemiBold',
   },
   processingHint: {
-    fontSize: 13,
+    fontSize: 12,
     fontFamily: 'Inter_400Regular',
+    textAlign: 'center',
+    paddingHorizontal: 24,
   },
   scanArea: {
     flex: 1,
-    gap: 16,
+    gap: 12,
   },
   frameBox: {
     flex: 1,
@@ -298,13 +314,19 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: 24,
   },
-  templateLabel: {
-    fontSize: 11,
-    fontFamily: 'Inter_600SemiBold',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-    overflow: 'hidden',
+  manualBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  manualBtnText: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: 'Inter_500Medium',
   },
   tipBox: {
     flexDirection: 'row',
