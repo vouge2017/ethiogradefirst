@@ -1,7 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Image,
   Platform,
   StyleSheet,
@@ -16,55 +15,55 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { useColors } from '@/hooks/useColors';
 import { useAssessment } from '@/context/AssessmentContext';
-import { runOMRDetection } from '@/lib/omr';
+import { mockOmrDetection } from '@/lib/omr';
 
 export default function ScanScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { currentAssessment, addPaper, setCurrentAssessment } = useAssessment();
+  const { currentAssessment, addResult } = useAssessment();
   const [processing, setProcessing] = useState(false);
   const [capturedUri, setCapturedUri] = useState<string | null>(null);
+  const [debugMsg, setDebugMsg] = useState<string | null>(null);
+  const [webCameraMsg, setWebCameraMsg] = useState<string | null>(null);
 
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 34 : insets.bottom;
 
-  const paperIndex = currentAssessment?.papers.length ?? 0;
+  const paperIndex = currentAssessment?.results.length ?? 0;
 
   const processImage = useCallback(async (uri: string) => {
     if (!currentAssessment) return;
+    console.log('[Scan] processImage called, paperIndex:', paperIndex);
     setCapturedUri(uri);
     setProcessing(true);
+    setDebugMsg('Running detection simulation...');
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     await new Promise(res => setTimeout(res, 900));
 
-    const paper = runOMRDetection(uri, currentAssessment.answerKey, paperIndex);
-    await addPaper(paper);
+    const draft = mockOmrDetection(uri, currentAssessment, paperIndex);
+    console.log('[Scan] Draft created id:', draft.id, 'source:', draft.gradingSource, 'issues:', draft.issues);
 
+    await addResult(draft);
     setProcessing(false);
     setCapturedUri(null);
+    setDebugMsg(null);
 
-    const updatedAssessment = {
-      ...currentAssessment,
-      papers: [...currentAssessment.papers, paper],
-    };
-    setCurrentAssessment(updatedAssessment);
-
-    router.push({ pathname: '/review', params: { paperId: paper.id } });
-  }, [currentAssessment, paperIndex, addPaper, setCurrentAssessment]);
+    console.log('[Scan] Navigating to review with resultId:', draft.id);
+    router.push({ pathname: '/review', params: { resultId: draft.id } });
+  }, [currentAssessment, paperIndex, addResult]);
 
   const handleCamera = useCallback(async () => {
+    console.log('[Scan] Camera pressed, platform:', Platform.OS);
     if (Platform.OS === 'web') {
-      Alert.alert('Camera not available', 'Use "Import" or "Manual Entry" on web.');
+      setWebCameraMsg('Camera scanning requires the Android or iOS app. Use "Import" or "Enter Manually" on web.');
       return;
     }
+    setWebCameraMsg(null);
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    console.log('[Scan] Camera permission:', status);
     if (status !== 'granted') {
-      Alert.alert(
-        'Camera permission required',
-        'Please allow camera access in Settings to scan papers.',
-        [{ text: 'OK' }]
-      );
+      setDebugMsg('Camera permission denied. Use Import or Manual Entry instead.');
       return;
     }
     const result = await ImagePicker.launchCameraAsync({
@@ -78,13 +77,11 @@ export default function ScanScreen() {
   }, [processImage]);
 
   const handleGallery = useCallback(async () => {
+    console.log('[Scan] Gallery import pressed');
+    setWebCameraMsg(null);
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert(
-        'Gallery permission required',
-        'Please allow photo library access to import papers.',
-        [{ text: 'OK' }]
-      );
+      setDebugMsg('Gallery permission denied. Try Manual Entry instead.');
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -97,14 +94,6 @@ export default function ScanScreen() {
     }
   }, [processImage]);
 
-  const handleManualEntry = useCallback(() => {
-    router.push('/manual');
-  }, []);
-
-  const handleViewResults = useCallback(() => {
-    router.push('/results');
-  }, []);
-
   if (!currentAssessment) {
     return (
       <View style={[styles.root, { backgroundColor: colors.background }]}>
@@ -112,6 +101,8 @@ export default function ScanScreen() {
       </View>
     );
   }
+
+  const confirmedCount = currentAssessment.results.filter(r => r.confirmedAt > 0).length;
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
@@ -124,14 +115,12 @@ export default function ScanScreen() {
             {currentAssessment.title}
           </Text>
           <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>
-            Paper {paperIndex + 1}
-            {currentAssessment.expectedPaperCount
-              ? ` of ${currentAssessment.expectedPaperCount}`
-              : ''}
+            Student {paperIndex + 1}
+            {currentAssessment.expectedPaperCount ? ` of ${currentAssessment.expectedPaperCount}` : ''}
           </Text>
         </View>
-        {currentAssessment.papers.length > 0 ? (
-          <TouchableOpacity onPress={handleViewResults}>
+        {confirmedCount > 0 ? (
+          <TouchableOpacity onPress={() => router.push('/results')}>
             <Text style={[styles.resultsLink, { color: colors.primary }]}>Results</Text>
           </TouchableOpacity>
         ) : (
@@ -140,6 +129,18 @@ export default function ScanScreen() {
       </View>
 
       <View style={styles.body}>
+        {webCameraMsg && (
+          <View style={[styles.webBanner, { backgroundColor: colors.warning + '18', borderColor: colors.warning + '40' }]}>
+            <Feather name="alert-triangle" size={14} color={colors.warning} />
+            <Text style={[styles.webBannerText, { color: colors.warning }]}>{webCameraMsg}</Text>
+          </View>
+        )}
+        {debugMsg && !processing && (
+          <View style={[styles.debugBanner, { backgroundColor: colors.muted }]}>
+            <Text style={[styles.debugText, { color: colors.mutedForeground }]}>{debugMsg}</Text>
+          </View>
+        )}
+
         {processing ? (
           <View style={styles.processingWrap}>
             {capturedUri && (
@@ -151,7 +152,7 @@ export default function ScanScreen() {
                 Detecting answers...
               </Text>
               <Text style={[styles.processingHint, { color: colors.mutedForeground }]}>
-                Note: detection is simulated — review all results carefully
+                Simulation active — review all results carefully
               </Text>
             </View>
           </View>
@@ -170,9 +171,8 @@ export default function ScanScreen() {
               </View>
             </View>
 
-            {/* Manual entry option */}
             <TouchableOpacity
-              onPress={handleManualEntry}
+              onPress={() => router.push('/manual')}
               activeOpacity={0.8}
               style={[styles.manualBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
             >
@@ -213,10 +213,10 @@ export default function ScanScreen() {
               <Text style={styles.cameraBtnText}>Scan Paper</Text>
             </TouchableOpacity>
           </View>
-          {currentAssessment.papers.length > 0 && (
-            <TouchableOpacity onPress={handleViewResults} style={styles.finishLink}>
+          {confirmedCount > 0 && (
+            <TouchableOpacity onPress={() => router.push('/results')} style={styles.finishLink}>
               <Text style={[styles.finishLinkText, { color: colors.mutedForeground }]}>
-                Done — view {currentAssessment.papers.length} result{currentAssessment.papers.length !== 1 ? 's' : ''}
+                Done — view {confirmedCount} confirmed result{confirmedCount !== 1 ? 's' : ''}
               </Text>
               <Feather name="chevron-right" size={14} color={colors.mutedForeground} />
             </TouchableOpacity>
@@ -230,167 +230,58 @@ export default function ScanScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingBottom: 14,
-    borderBottomWidth: 1,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 20, paddingBottom: 14, borderBottomWidth: 1,
   },
   headerCenter: { flex: 1, alignItems: 'center', paddingHorizontal: 8 },
-  headerTitle: {
-    fontSize: 16,
-    fontFamily: 'Inter_600SemiBold',
+  headerTitle: { fontSize: 16, fontFamily: 'Inter_600SemiBold' },
+  headerSub: { fontSize: 12, fontFamily: 'Inter_400Regular' },
+  resultsLink: { fontSize: 14, fontFamily: 'Inter_600SemiBold', width: 50, textAlign: 'right' },
+  body: { flex: 1, padding: 20, gap: 10 },
+  webBanner: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 8,
+    padding: 10, borderRadius: 10, borderWidth: 1,
   },
-  headerSub: {
-    fontSize: 12,
-    fontFamily: 'Inter_400Regular',
-  },
-  resultsLink: {
-    fontSize: 14,
-    fontFamily: 'Inter_600SemiBold',
-    width: 50,
-    textAlign: 'right',
-  },
-  body: {
-    flex: 1,
-    padding: 20,
-  },
-  processingWrap: {
-    flex: 1,
-    position: 'relative',
-  },
-  preview: {
-    flex: 1,
-    borderRadius: 12,
-  },
+  webBannerText: { flex: 1, fontSize: 13, fontFamily: 'Inter_400Regular', lineHeight: 18 },
+  debugBanner: { padding: 8, borderRadius: 8 },
+  debugText: { fontSize: 12, fontFamily: 'Inter_400Regular' },
+  processingWrap: { flex: 1, position: 'relative' },
+  preview: { flex: 1, borderRadius: 12 },
   processingOverlay: {
     ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-    borderRadius: 12,
+    alignItems: 'center', justifyContent: 'center', gap: 12, borderRadius: 12,
   },
-  processingText: {
-    fontSize: 17,
-    fontFamily: 'Inter_600SemiBold',
-  },
-  processingHint: {
-    fontSize: 12,
-    fontFamily: 'Inter_400Regular',
-    textAlign: 'center',
-    paddingHorizontal: 24,
-  },
-  scanArea: {
-    flex: 1,
-    gap: 12,
-  },
-  frameBox: {
-    flex: 1,
-    borderRadius: 16,
-    borderWidth: 1,
-    position: 'relative',
-    overflow: 'visible',
-  },
-  corner: {
-    position: 'absolute',
-    width: 28,
-    height: 28,
-    borderWidth: 3,
-  },
+  processingText: { fontSize: 17, fontFamily: 'Inter_600SemiBold' },
+  processingHint: { fontSize: 12, fontFamily: 'Inter_400Regular', textAlign: 'center', paddingHorizontal: 24 },
+  scanArea: { flex: 1, gap: 12 },
+  frameBox: { flex: 1, borderRadius: 16, borderWidth: 1, position: 'relative', overflow: 'visible' },
+  corner: { position: 'absolute', width: 28, height: 28, borderWidth: 3 },
   cornerTL: { top: -2, left: -2, borderRightWidth: 0, borderBottomWidth: 0, borderTopLeftRadius: 8 },
   cornerTR: { top: -2, right: -2, borderLeftWidth: 0, borderBottomWidth: 0, borderTopRightRadius: 8 },
   cornerBL: { bottom: -2, left: -2, borderRightWidth: 0, borderTopWidth: 0, borderBottomLeftRadius: 8 },
   cornerBR: { bottom: -2, right: -2, borderLeftWidth: 0, borderTopWidth: 0, borderBottomRightRadius: 8 },
-  frameInner: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-  },
-  frameHint: {
-    fontSize: 14,
-    fontFamily: 'Inter_400Regular',
-    textAlign: 'center',
-    paddingHorizontal: 24,
-  },
+  frameInner: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
+  frameHint: { fontSize: 14, fontFamily: 'Inter_400Regular', textAlign: 'center', paddingHorizontal: 24 },
   manualBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 13,
-    borderRadius: 12,
-    borderWidth: 1,
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingHorizontal: 16, paddingVertical: 13, borderRadius: 12, borderWidth: 1,
   },
-  manualBtnText: {
-    flex: 1,
-    fontSize: 14,
-    fontFamily: 'Inter_500Medium',
-  },
-  tipBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    padding: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-  },
-  tipText: {
-    flex: 1,
-    fontSize: 12,
-    fontFamily: 'Inter_400Regular',
-  },
-  footer: {
-    padding: 16,
-    borderTopWidth: 1,
-    gap: 10,
-  },
-  footerRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
+  manualBtnText: { flex: 1, fontSize: 14, fontFamily: 'Inter_500Medium' },
+  tipBox: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, borderRadius: 10, borderWidth: 1 },
+  tipText: { flex: 1, fontSize: 12, fontFamily: 'Inter_400Regular' },
+  footer: { padding: 16, borderTopWidth: 1, gap: 10 },
+  footerRow: { flexDirection: 'row', gap: 10 },
   galleryBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderRadius: 14,
-    borderWidth: 1.5,
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingHorizontal: 20, paddingVertical: 14, borderRadius: 14, borderWidth: 1.5,
   },
-  galleryBtnText: {
-    fontSize: 15,
-    fontFamily: 'Inter_600SemiBold',
-  },
+  galleryBtnText: { fontSize: 15, fontFamily: 'Inter_600SemiBold' },
   cameraBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 14,
-    borderRadius: 14,
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, paddingVertical: 14, borderRadius: 14,
   },
-  cameraBtnText: {
-    color: '#fff',
-    fontSize: 16,
-    fontFamily: 'Inter_600SemiBold',
-  },
-  finishLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-  },
-  finishLinkText: {
-    fontSize: 13,
-    fontFamily: 'Inter_400Regular',
-  },
-  errorText: {
-    textAlign: 'center',
-    marginTop: 60,
-    fontSize: 16,
-    fontFamily: 'Inter_400Regular',
-  },
+  cameraBtnText: { color: '#fff', fontSize: 16, fontFamily: 'Inter_600SemiBold' },
+  finishLink: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 },
+  finishLinkText: { fontSize: 13, fontFamily: 'Inter_400Regular' },
+  errorText: { textAlign: 'center', marginTop: 60, fontSize: 16, fontFamily: 'Inter_400Regular' },
 });

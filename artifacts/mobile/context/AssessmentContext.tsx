@@ -1,24 +1,21 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import type { Assessment, PaperResult } from '@/lib/types';
-import { loadAllAssessments, saveAssessment, deleteAssessment as deleteAssessmentFromStorage } from '@/lib/storage';
-
-function generateId(): string {
-  return Date.now().toString() + Math.random().toString(36).substr(2, 9);
-}
+import type { Assessment, StudentResult } from '@/lib/types';
+import { makeId } from '@/lib/types';
+import { loadAllAssessments, saveAssessment, deleteAssessment as dbDelete } from '@/lib/storage';
 
 interface AssessmentContextValue {
   assessments: Assessment[];
   currentAssessment: Assessment | null;
   loading: boolean;
-  createAssessment: (data: Omit<Assessment, 'id' | 'papers' | 'createdAt' | 'updatedAt'>) => Assessment;
+  beginAssessment: (data: Omit<Assessment, 'id' | 'results' | 'createdAt' | 'updatedAt'>) => Promise<Assessment>;
   setCurrentAssessment: (a: Assessment | null) => void;
-  addPaper: (paper: PaperResult) => Promise<void>;
-  updatePaper: (paperId: string, updated: PaperResult) => Promise<void>;
+  addResult: (result: StudentResult) => Promise<void>;
+  updateResult: (resultId: string, updated: StudentResult) => Promise<void>;
   deleteAssessment: (id: string) => Promise<void>;
   refreshAssessments: () => Promise<void>;
 }
 
-const AssessmentContext = createContext<AssessmentContextValue | null>(null);
+const Ctx = createContext<AssessmentContextValue | null>(null);
 
 export function AssessmentProvider({ children }: { children: React.ReactNode }) {
   const [assessments, setAssessments] = useState<Assessment[]>([]);
@@ -30,98 +27,65 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
     setAssessments(all);
   }, []);
 
-  useEffect(() => {
-    refreshAssessments().finally(() => setLoading(false));
-  }, [refreshAssessments]);
+  useEffect(() => { refreshAssessments().finally(() => setLoading(false)); }, [refreshAssessments]);
 
-  const createAssessment = useCallback((
-    data: Omit<Assessment, 'id' | 'papers' | 'createdAt' | 'updatedAt'>
-  ): Assessment => {
-    const now = Date.now();
-    const assessment: Assessment = {
-      ...data,
-      id: generateId(),
-      papers: [],
-      createdAt: now,
-      updatedAt: now,
-    };
-    return assessment;
+  const persist = useCallback(async (updated: Assessment) => {
+    setCurrentAssessmentState(updated);
+    setAssessments(prev => {
+      const idx = prev.findIndex(a => a.id === updated.id);
+      if (idx >= 0) { const n = [...prev]; n[idx] = updated; return n; }
+      return [updated, ...prev];
+    });
+    await saveAssessment(updated);
   }, []);
 
   const setCurrentAssessment = useCallback((a: Assessment | null) => {
     setCurrentAssessmentState(a);
   }, []);
 
-  const addPaper = useCallback(async (paper: PaperResult) => {
-    if (!currentAssessment) return;
-    const updated: Assessment = {
-      ...currentAssessment,
-      papers: [...currentAssessment.papers, paper],
-      updatedAt: Date.now(),
-    };
-    setCurrentAssessmentState(updated);
-    setAssessments(prev => {
-      const idx = prev.findIndex(a => a.id === updated.id);
-      if (idx >= 0) {
-        const next = [...prev];
-        next[idx] = updated;
-        return next;
-      }
-      return [updated, ...prev];
-    });
-    await saveAssessment(updated);
-  }, [currentAssessment]);
+  const beginAssessment = useCallback(async (
+    data: Omit<Assessment, 'id' | 'results' | 'createdAt' | 'updatedAt'>
+  ): Promise<Assessment> => {
+    const now = Date.now();
+    const assessment: Assessment = { ...data, id: makeId(), results: [], createdAt: now, updatedAt: now };
+    await persist(assessment);
+    return assessment;
+  }, [persist]);
 
-  const updatePaper = useCallback(async (paperId: string, updatedPaper: PaperResult) => {
+  const addResult = useCallback(async (result: StudentResult) => {
     if (!currentAssessment) return;
-    const papers = currentAssessment.papers.map(p => p.id === paperId ? updatedPaper : p);
-    const updated: Assessment = {
+    await persist({
       ...currentAssessment,
-      papers,
+      results: [...currentAssessment.results, result],
       updatedAt: Date.now(),
-    };
-    setCurrentAssessmentState(updated);
-    setAssessments(prev => {
-      const idx = prev.findIndex(a => a.id === updated.id);
-      if (idx >= 0) {
-        const next = [...prev];
-        next[idx] = updated;
-        return next;
-      }
-      return [updated, ...prev];
     });
-    await saveAssessment(updated);
-  }, [currentAssessment]);
+  }, [currentAssessment, persist]);
+
+  const updateResult = useCallback(async (resultId: string, updated: StudentResult) => {
+    if (!currentAssessment) return;
+    const results = currentAssessment.results.map(r => r.id === resultId ? updated : r);
+    await persist({ ...currentAssessment, results, updatedAt: Date.now() });
+  }, [currentAssessment, persist]);
 
   const deleteAssessment = useCallback(async (id: string) => {
-    await deleteAssessmentFromStorage(id);
+    await dbDelete(id);
     setAssessments(prev => prev.filter(a => a.id !== id));
-    if (currentAssessment?.id === id) {
-      setCurrentAssessmentState(null);
-    }
+    if (currentAssessment?.id === id) setCurrentAssessmentState(null);
   }, [currentAssessment]);
 
   return (
-    <AssessmentContext.Provider
-      value={{
-        assessments,
-        currentAssessment,
-        loading,
-        createAssessment,
-        setCurrentAssessment,
-        addPaper,
-        updatePaper,
-        deleteAssessment,
-        refreshAssessments,
-      }}
-    >
+    <Ctx.Provider value={{
+      assessments, currentAssessment, loading,
+      beginAssessment, setCurrentAssessment,
+      addResult, updateResult, deleteAssessment, refreshAssessments,
+    }}>
       {children}
-    </AssessmentContext.Provider>
+    </Ctx.Provider>
   );
 }
 
 export function useAssessment(): AssessmentContextValue {
-  const ctx = useContext(AssessmentContext);
+  const ctx = useContext(Ctx);
   if (!ctx) throw new Error('useAssessment must be used within AssessmentProvider');
   return ctx;
 }

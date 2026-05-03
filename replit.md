@@ -21,22 +21,36 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 ### EthioGrade Mobile App (`artifacts/mobile`)
 Offline-first Ethiopian exam grading app built with Expo + React Native.
 
-**Purpose:** Help Ethiopian teachers grade objective (multiple-choice) exams faster by scanning bubble-sheet answer papers, detecting answers with confidence scoring, reviewing/correcting detections, calculating scores, and exporting CSV results.
+**Purpose:** Help Ethiopian teachers grade mixed-type exams (MCQ, True/False, Short Answer, Matching) with per-question weights, hybrid scan+manual grading, and weighted scoring.
+
+**Data Model (v2 — `ethiograde_v2` AsyncStorage key):**
+- `Assessment` → `questions: Question[]`, `totalPoints`, `results: StudentResult[]`
+- `Question` → `{id, number, type: QuestionType, weight, gradingMode, correctAnswer?, correctBoolean?}`
+- `StudentResult` → `{id, studentName, studentId?, responses, earnedPoints, totalPoints, percentage, confirmedAt, gradingSource, issues}`
+- `QuestionResponse` → `{questionId, type, selectedAnswer?, booleanAnswer?, manualScore?, maxScore, isCorrect?, confidence?, issueCodes[]}`
+- `confirmedAt === 0` = pending draft; `confirmedAt > 0` = confirmed result
 
 **Key Features:**
-- Quick Assessment mode (no student database required)
+- 4 question types: MCQ (A-E bubbles), True/False, Short Answer, Matching
+- Per-question weight (pts) — weighted scoring across all types
 - OMR detection — PROTOTYPE SIMULATION ONLY (Math.random(), imageUri never read)
-- Confidence classification: SINGLE / BLANK / MULTIPLE / LOW_CONFIDENCE
-- Manual Entry mode — bypass camera, tap A–E per question
-- Student name + optional ID on every result
-- Teacher review screen with per-question correction (mandatory before confirm)
-- Results screen with class stats (avg, pass rate)
-- CSV export: Student Name, Student ID, Score, Max, %, per-question answers
-- Fully offline — all data in AsyncStorage
+- Hybrid grading: MCQ/T-F auto-scored from scan; Short/Matching require manual score in review
+- Manual Entry mode — full direct entry for all question types
+- Teacher review screen: correct MCQ/T-F answers, enter manual scores
+- Results: confirmed vs pending split, class avg/pass rate stats
+- CSV export: Student Name, Student ID, Earned, Total, %, per-question columns
+- Fully offline — all data in AsyncStorage (key: `ethiograde_v2`)
 
 **Navigation:** Stack-based — index → setup → scan → (review | manual) → results
 
 **Important:** OMR is simulated. See `docs/OMR_STATUS.md`. Not ready for Play Store.
+
+**Key lib files:**
+- `lib/types.ts` — all shared types + calcEarnedPoints, makeId, gradingModeForType
+- `lib/omr.ts` — mockOmrDetection() simulation (explicit label)
+- `lib/storage.ts` — AsyncStorage CRUD (key: ethiograde_v2)
+- `lib/csv.ts` — generateCSV / exportCSV for new model
+- `context/AssessmentContext.tsx` — beginAssessment, addResult, updateResult
 
 **Docs:** `artifacts/mobile/docs/`
 - PROJECT_VISION.md — long-term AI agent vision, current milestone scope

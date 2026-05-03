@@ -1,156 +1,109 @@
 /**
- * PROTOTYPE / SIMULATION — NOT REAL OMR
+ * PROTOTYPE SIMULATION — NOT REAL OMR
  *
- * This module simulates Optical Mark Recognition (OMR) using Math.random().
- * The `imageUri` parameter is accepted but NEVER READ. No image processing
- * takes place. All detection results are randomly generated.
+ * This module is a MOCK/SIMULATION using Math.random().
+ * The imageUri parameter is NEVER READ. No image processing happens.
+ * Only MCQ and True/False questions are simulated.
+ * Short Answer and Matching always require manual scoring.
  *
- * This simulation exists to make the teacher review flow functional during
- * development. It must be replaced with real bubble-detection logic before
- * EthioGrade is used for actual grading decisions.
- *
- * See docs/OMR_STATUS.md for full details, limitations, and the upgrade path.
+ * See docs/OMR_STATUS.md for details and the upgrade path to real OMR.
  */
-import type { Answer, DetectionStatus, IssueCode, QuestionDetection, PaperResult } from './types';
+import type { Assessment, Question, QuestionResponse, StudentResult, GradingSource } from './types';
+import { calcEarnedPoints, makeId } from './types';
 
-const ANSWERS: Answer[] = ['A', 'B', 'C', 'D', 'E'];
+const MCQ_OPTIONS = ['A', 'B', 'C', 'D', 'E'];
 
-function generateId(): string {
-  return Date.now().toString() + Math.random().toString(36).substr(2, 9);
-}
-
-function simulateQuestionDetection(
-  questionNumber: number,
-  answerKey: Answer[]
-): QuestionDetection {
+function mockMcqResponse(q: Question): QuestionResponse {
   const rand = Math.random();
-  let status: DetectionStatus;
-  let detectedAnswer: Answer;
-  let confidence: number;
-
   if (rand < 0.72) {
-    status = 'SINGLE';
-    confidence = 0.80 + Math.random() * 0.19;
-    // Bias toward correct answer ~70% of the time
-    detectedAnswer = Math.random() < 0.70
-      ? answerKey[questionNumber - 1]!
-      : ANSWERS[Math.floor(Math.random() * 5)]!;
+    const answer = (q.correctAnswer && Math.random() < 0.70)
+      ? q.correctAnswer
+      : MCQ_OPTIONS[Math.floor(Math.random() * 5)];
+    return {
+      questionId: q.id, type: 'mcq', selectedAnswer: answer, maxScore: q.weight,
+      isCorrect: answer === q.correctAnswer, confidence: 0.80 + Math.random() * 0.19,
+      needsReview: false, issueCodes: [],
+    };
   } else if (rand < 0.85) {
-    status = 'LOW_CONFIDENCE';
-    confidence = 0.35 + Math.random() * 0.30;
-    detectedAnswer = ANSWERS[Math.floor(Math.random() * 5)]!;
+    const answer = MCQ_OPTIONS[Math.floor(Math.random() * 5)];
+    return {
+      questionId: q.id, type: 'mcq', selectedAnswer: answer, maxScore: q.weight,
+      isCorrect: answer === q.correctAnswer, confidence: 0.35 + Math.random() * 0.30,
+      needsReview: true, issueCodes: ['LOW_CONFIDENCE'],
+    };
   } else if (rand < 0.93) {
-    status = 'BLANK';
-    confidence = 0.90 + Math.random() * 0.09;
-    detectedAnswer = null;
+    return {
+      questionId: q.id, type: 'mcq', selectedAnswer: undefined, maxScore: q.weight,
+      isCorrect: false, confidence: 0.90, needsReview: true, issueCodes: ['BLANK'],
+    };
   } else {
-    status = 'MULTIPLE';
-    confidence = 0.40 + Math.random() * 0.25;
-    detectedAnswer = ANSWERS[Math.floor(Math.random() * 5)]!;
+    const answer = MCQ_OPTIONS[Math.floor(Math.random() * 5)];
+    return {
+      questionId: q.id, type: 'mcq', selectedAnswer: answer, maxScore: q.weight,
+      isCorrect: answer === q.correctAnswer, confidence: 0.40 + Math.random() * 0.25,
+      needsReview: true, issueCodes: ['MULTIPLE_MARKS'],
+    };
   }
-
-  const needsReview = status === 'LOW_CONFIDENCE' || status === 'MULTIPLE' || status === 'BLANK';
-
-  return {
-    questionNumber,
-    detectedAnswer,
-    status,
-    confidence,
-    needsReview,
-  };
 }
 
-export function runOMRDetection(
+function mockTrueFalseResponse(q: Question): QuestionResponse {
+  const rand = Math.random();
+  if (rand < 0.80) {
+    const answer = (q.correctBoolean !== undefined && Math.random() < 0.75)
+      ? q.correctBoolean
+      : Math.random() < 0.5;
+    return {
+      questionId: q.id, type: 'true_false', booleanAnswer: answer, maxScore: q.weight,
+      isCorrect: answer === q.correctBoolean, confidence: 0.82 + Math.random() * 0.17,
+      needsReview: false, issueCodes: [],
+    };
+  } else {
+    const answer = Math.random() < 0.5;
+    return {
+      questionId: q.id, type: 'true_false', booleanAnswer: answer, maxScore: q.weight,
+      isCorrect: answer === q.correctBoolean, confidence: 0.35 + Math.random() * 0.30,
+      needsReview: true, issueCodes: ['LOW_CONFIDENCE'],
+    };
+  }
+}
+
+export function mockOmrDetection(
   imageUri: string,
-  answerKey: Answer[],
-  paperIndex: number
-): PaperResult {
-  const questionCount = answerKey.length;
-  const detections: QuestionDetection[] = Array.from({ length: questionCount }, (_, i) =>
-    simulateQuestionDetection(i + 1, answerKey)
-  );
+  assessment: Assessment,
+  paperIndex: number,
+): StudentResult {
+  console.log('[MockOMR] Simulation started for paper', paperIndex + 1);
+  console.log('[MockOMR] imageUri received but NOT READ:', imageUri.substring(0, 40) + '...');
 
-  const issues: IssueCode[] = [];
+  const responses: QuestionResponse[] = assessment.questions.map(q => {
+    if (q.type === 'mcq') return mockMcqResponse(q);
+    if (q.type === 'true_false') return mockTrueFalseResponse(q);
+    console.log('[MockOMR] Q' + q.number + ' (' + q.type + ') requires manual scoring — skipping auto-detection');
+    return {
+      questionId: q.id, type: q.type, maxScore: q.weight,
+      needsReview: true, issueCodes: ['REQUIRES_MANUAL_SCORING'],
+    };
+  });
 
-  if (questionCount !== 20) {
-    issues.push('TEMPLATE_UNSUPPORTED_QUESTION_COUNT');
-  }
+  const hasManual = assessment.questions.some(q => q.type === 'short_answer' || q.type === 'matching');
+  const hasAuto = assessment.questions.some(q => q.type === 'mcq' || q.type === 'true_false');
+  const gradingSource: GradingSource = hasManual && hasAuto ? 'hybrid' : hasManual ? 'manual' : 'scan';
 
-  const avgConfidence = detections.reduce((sum, d) => sum + d.confidence, 0) / detections.length;
-  if (avgConfidence < 0.65) {
-    issues.push('LOW_OVERALL_CONFIDENCE');
-  }
+  const earnedPoints = calcEarnedPoints(responses, assessment.questions);
+  const allIssues = [...new Set(responses.flatMap(r => r.issueCodes))];
 
-  const lowConfidenceCount = detections.filter(d => d.needsReview).length;
-  if (lowConfidenceCount > 0) {
-    issues.push('QUESTION_REVIEW_REQUIRED');
-  }
-
-  const hasAlignmentIssue = Math.random() < 0.15;
-  if (hasAlignmentIssue) {
-    issues.push('TEMPLATE_ALIGNMENT_LOW');
-  }
-
-  const finalAnswers: Answer[] = detections.map(d => d.detectedAnswer);
-  const score = calculateScore(finalAnswers, answerKey);
+  console.log('[MockOMR] Simulation complete. Source:', gradingSource, 'Draft pts:', earnedPoints, '/', assessment.totalPoints);
 
   return {
-    id: generateId(),
-    label: `Paper ${paperIndex + 1}`,
-    imageUri,
-    detections,
-    issues,
-    finalAnswers,
-    score,
-    maxScore: questionCount,
-    percentage: questionCount > 0 ? Math.round((score / questionCount) * 100) : 0,
-    reviewComplete: false,
-    createdAt: Date.now(),
+    id: makeId(),
+    assessmentId: assessment.id,
+    studentName: `Paper ${paperIndex + 1}`,
+    responses,
+    earnedPoints,
+    totalPoints: assessment.totalPoints,
+    percentage: assessment.totalPoints > 0 ? Math.round((earnedPoints / assessment.totalPoints) * 100) : 0,
+    issues: allIssues,
+    gradingSource,
+    confirmedAt: 0,
   };
-}
-
-export function calculateScore(finalAnswers: Answer[], answerKey: Answer[]): number {
-  let score = 0;
-  for (let i = 0; i < answerKey.length; i++) {
-    if (finalAnswers[i] !== null && finalAnswers[i] === answerKey[i]) {
-      score++;
-    }
-  }
-  return score;
-}
-
-export function applyCorrections(paper: PaperResult, answerKey: Answer[]): PaperResult {
-  const finalAnswers: Answer[] = paper.detections.map(d =>
-    d.correctedAnswer !== undefined ? d.correctedAnswer : d.detectedAnswer
-  );
-  const score = calculateScore(finalAnswers, answerKey);
-  return {
-    ...paper,
-    finalAnswers,
-    score,
-    percentage: answerKey.length > 0 ? Math.round((score / answerKey.length) * 100) : 0,
-    reviewComplete: true,
-  };
-}
-
-export function getIssueLabel(code: IssueCode): string {
-  switch (code) {
-    case 'TEMPLATE_UNSUPPORTED_QUESTION_COUNT':
-      return 'Unsupported question count';
-    case 'TEMPLATE_ALIGNMENT_LOW':
-      return 'Sheet alignment issue detected';
-    case 'LOW_OVERALL_CONFIDENCE':
-      return 'Low overall detection confidence';
-    case 'QUESTION_REVIEW_REQUIRED':
-      return 'Some answers need review';
-  }
-}
-
-export function getStatusLabel(status: DetectionStatus): string {
-  switch (status) {
-    case 'SINGLE': return 'Clear';
-    case 'BLANK': return 'Blank';
-    case 'MULTIPLE': return 'Multiple marks';
-    case 'LOW_CONFIDENCE': return 'Uncertain';
-  }
 }

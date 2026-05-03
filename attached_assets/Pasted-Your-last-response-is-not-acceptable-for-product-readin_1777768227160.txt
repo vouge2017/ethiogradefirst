@@ -1,0 +1,240 @@
+Your last response is not acceptable for product readiness.
+
+You confirmed screens visually render, but EthioGrade is not just a screen demo. We need a classroom-usable teacher grading workflow.
+
+Critical missing items:
+1. I do not see how to create True/False questions.
+2. I do not see how to create Short Answer questions.
+3. I do not see how to create Matching questions.
+4. I do not see how to assign weight/points per question.
+5. The scan button is not responsive.
+6. The camera does not open.
+7. I cannot capture/record an image to test.
+8. You only verified direct routes and guard screens, not the full teacher workflow.
+
+Stop defending screen rendering. Fix the product workflow.
+
+Immediate goal:
+Build Milestone 1 — Classroom-Usable Assessment Builder and Grading Flow.
+
+A real teacher must be able to:
+1. Create an assessment.
+2. Add different question types.
+3. Set correct answers.
+4. Set weight/points per question.
+5. Grade a student manually.
+6. Use camera scan for supported objective questions.
+7. Review/correct answers.
+8. Save weighted score.
+9. Export useful CSV.
+
+Implement the following.
+
+P1. Real assessment data model
+
+Create or update the data model to support:
+
+QuestionType:
+- mcq
+- true_false
+- short_answer
+- matching
+
+Question fields:
+- id
+- number
+- type
+- prompt optional
+- options optional
+- correctAnswer optional
+- correctBoolean optional
+- expectedAnswer optional
+- matchingPairs optional
+- weight
+- gradingMode: auto | manual | hybrid
+
+Assessment fields:
+- id
+- title
+- questions[]
+- totalPoints
+- expectedPaperCount optional
+- createdAt
+- updatedAt
+
+StudentResult fields:
+- id
+- assessmentId
+- studentName
+- studentId optional
+- responses[]
+- earnedPoints
+- totalPoints
+- percentage
+- issues[]
+- gradingSource: scan | manual | hybrid
+- confirmedAt
+
+Response fields:
+- questionId
+- type
+- selectedAnswer optional
+- booleanAnswer optional
+- textAnswer optional
+- matchingAnswer optional
+- manualScore optional
+- maxScore
+- isCorrect optional
+- confidence optional
+- issueCodes[]
+
+P2. Assessment setup screen
+
+Update the setup screen so the teacher can:
+- Enter assessment title.
+- Choose question count.
+- For each question:
+  - Select type: Multiple Choice, True/False, Short Answer, Matching.
+  - Set weight/points.
+  - For MCQ: choose A/B/C/D/E answer.
+  - For True/False: choose True or False.
+  - For Short Answer: enter expected answer/marking note.
+  - For Matching: enter correct matching pairs in a simple format, e.g. 1-B, 2-D, 3-A.
+- Show total points.
+- Validate that every question has weight > 0.
+- Validate required answer fields based on type.
+
+Important:
+Do not overcomplicate the UI. A simple expandable question card/list is enough.
+
+P3. Manual grading flow
+
+Build/fix Manual Entry mode so a teacher can grade one student without camera.
+
+Manual screen must:
+- Ask for student name.
+- Ask optional student ID/roll number.
+- Show each question.
+- For MCQ: tap A/B/C/D/E.
+- For True/False: tap True/False.
+- For Short Answer: enter manual score from 0 to question weight, with optional note.
+- For Matching: enter manual score from 0 to question weight, with optional note.
+- Calculate weighted total.
+- Save confirmed result.
+- Navigate to Results.
+
+P4. Scan/camera flow fix
+
+The scan button currently is not responsive and camera does not open. Fix this.
+
+Required:
+- Add clear console logs or visible debug messages for button press, permission request, camera open, capture success, capture failure.
+- Use Expo camera or the project’s existing camera library correctly.
+- Request camera permission.
+- If camera is unavailable in web preview, show a clear message:
+  “Camera test requires Android/iOS device or emulator.”
+- Add image import fallback using image picker if camera cannot open.
+- After capture/import, pass image URI to review screen.
+- Review screen must show the captured/imported image.
+
+P5. Hybrid grading rule
+
+Only objective bubble questions can be auto-scanned.
+
+For MVP:
+- MCQ can be scan-assisted.
+- True/False can be scan-assisted if the template supports it.
+- Short Answer is manual scoring.
+- Matching is manual scoring.
+
+If an assessment contains mixed question types:
+- Scan objective questions.
+- Ask teacher to manually score short answer and matching.
+- Final result source should be hybrid.
+
+Do not pretend short answers or matching are auto-graded.
+
+P6. OMR honesty
+
+Audit the current OMR file/function.
+
+Report:
+- Is it real image-based OMR or mock/simulated?
+- What file contains it?
+- What inputs does it use?
+- What outputs does it produce?
+- What question types does it support?
+- What limitations exist?
+
+If OMR is mock, rename it clearly:
+- mockOmrDetector
+or
+- prototypeOmrDetector
+
+Do not call it production OMR.
+
+P7. CSV export
+
+Update CSV export to include:
+
+- Assessment Title
+- Student Name
+- Student ID
+- Earned Points
+- Total Points
+- Percentage
+- Grading Source
+- Per-question responses
+- Manual scores
+- Issue codes
+- Confirmed At
+
+P8. Testing
+
+Do not only test route rendering.
+
+Test the actual flow:
+1. Home → New Assessment
+2. Create assessment with:
+   - Q1 MCQ, weight 1, answer A
+   - Q2 True/False, weight 1, answer True
+   - Q3 Short Answer, weight 3
+   - Q4 Matching, weight 4
+3. Save assessment
+4. Open Manual Entry
+5. Enter student name and ID
+6. Grade all question types
+7. Confirm result
+8. View Results
+9. Export CSV
+10. Restart app and confirm result persists
+11. Press Scan
+12. Confirm camera permission behavior
+13. Confirm image import fallback works
+14. Confirm review screen receives image URI
+
+P9. GitHub commits
+
+Commit in this order:
+1. docs: clarify classroom MVP gaps and mixed-question requirements
+2. feat: add mixed question assessment model with weights
+3. feat: add assessment setup for mcq true false short answer and matching
+4. feat: add weighted manual grading flow
+5. fix: repair scan camera and image import flow
+6. feat: export weighted mixed-question results to csv
+7. docs: document OMR status and Android camera testing
+
+Final response required:
+- Branch name
+- Commit hashes
+- Files changed
+- What works now
+- What still does not work
+- Whether camera was tested on real Android/emulator or only web
+- Whether OMR is real or mock
+- Whether the app is ready for classroom pilot
+
+Do not claim Play Store readiness.
+Do not build full AI agent yet.
+Do not add backend, login, payment, essay AI, or cloud OCR.
+Focus only on classroom-usable MVP.

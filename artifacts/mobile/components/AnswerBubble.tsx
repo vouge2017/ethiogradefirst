@@ -1,16 +1,15 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useColors } from '@/hooks/useColors';
-import type { Answer } from '@/lib/types';
 
-const OPTIONS: Answer[] = ['A', 'B', 'C', 'D', 'E'];
+const MCQ_OPTIONS: string[] = ['A', 'B', 'C', 'D', 'E'];
 
 interface AnswerBubbleProps {
-  answer: Answer;
+  answer: string | null;
   selected?: boolean;
   correct?: boolean;
   incorrect?: boolean;
-  onPress?: (answer: Answer) => void;
+  onPress?: (answer: string | null) => void;
   size?: 'sm' | 'md' | 'lg';
 }
 
@@ -49,16 +48,7 @@ export function AnswerBubble({
       onPress={() => onPress?.(answer)}
       disabled={!onPress}
       activeOpacity={0.7}
-      style={[
-        styles.bubble,
-        {
-          width: dim,
-          height: dim,
-          borderRadius: dim / 2,
-          backgroundColor: bgColor,
-          borderColor,
-        },
-      ]}
+      style={[styles.bubble, { width: dim, height: dim, borderRadius: dim / 2, backgroundColor: bgColor, borderColor }]}
     >
       <Text style={[styles.label, { color: textColor, fontSize }]}>
         {answer ?? '—'}
@@ -68,9 +58,9 @@ export function AnswerBubble({
 }
 
 interface AnswerSelectorProps {
-  selected: Answer;
-  onSelect: (answer: Answer) => void;
-  correctAnswer?: Answer;
+  selected: string | null;
+  onSelect: (answer: string | null) => void;
+  correctAnswer?: string | null;
   showResult?: boolean;
   size?: 'sm' | 'md' | 'lg';
 }
@@ -82,10 +72,9 @@ export function AnswerSelector({
   showResult = false,
   size = 'md',
 }: AnswerSelectorProps) {
-  const colors = useColors();
   return (
     <View style={styles.selector}>
-      {OPTIONS.map(opt => {
+      {MCQ_OPTIONS.map(opt => {
         const isSelected = selected === opt;
         const isCorrect = showResult && correctAnswer === opt;
         const isIncorrect = showResult && isSelected && opt !== correctAnswer;
@@ -112,17 +101,7 @@ export function AnswerSelector({
 }
 
 const styles = StyleSheet.create({
-  bubble: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-  },
-  label: {
-    fontFamily: 'Inter_600SemiBold',
-  },
-  selector: {
-    flexDirection: 'row',
-    gap: 6,
-    flexWrap: 'wrap',
-  },
+  bubble: { alignItems: 'center', justifyContent: 'center', borderWidth: 1.5 },
+  label: { fontFamily: 'Inter_600SemiBold' },
+  selector: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
 });

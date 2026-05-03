@@ -34,20 +34,20 @@ export default function ResultsScreen() {
     );
   }
 
-  const completed = currentAssessment.papers.filter(p => p.reviewComplete);
-  const pending = currentAssessment.papers.filter(p => !p.reviewComplete);
+  const confirmed = currentAssessment.results.filter(r => r.confirmedAt > 0);
+  const pending = currentAssessment.results.filter(r => r.confirmedAt === 0);
   const avgScore =
-    completed.length > 0
-      ? Math.round(completed.reduce((s, p) => s + p.percentage, 0) / completed.length)
+    confirmed.length > 0
+      ? Math.round(confirmed.reduce((s, r) => s + r.percentage, 0) / confirmed.length)
       : null;
   const passRate =
-    completed.length > 0
-      ? Math.round((completed.filter(p => p.percentage >= 50).length / completed.length) * 100)
+    confirmed.length > 0
+      ? Math.round((confirmed.filter(r => r.percentage >= 50).length / confirmed.length) * 100)
       : null;
 
   const handleExport = useCallback(async () => {
-    if (completed.length === 0) {
-      Alert.alert('No reviewed papers', 'Review and confirm at least one paper before exporting.');
+    if (confirmed.length === 0) {
+      Alert.alert('No confirmed results', 'Confirm at least one student result before exporting.');
       return;
     }
     setExporting(true);
@@ -59,14 +59,10 @@ export default function ResultsScreen() {
     } finally {
       setExporting(false);
     }
-  }, [currentAssessment, completed.length]);
+  }, [currentAssessment, confirmed.length]);
 
-  const handleScanMore = useCallback(() => {
-    router.push('/scan');
-  }, []);
-
-  const handleReview = useCallback((paperId: string) => {
-    router.push({ pathname: '/review', params: { paperId } });
+  const handleReview = useCallback((resultId: string) => {
+    router.push({ pathname: '/review', params: { resultId } });
   }, []);
 
   return (
@@ -80,22 +76,22 @@ export default function ResultsScreen() {
         </Text>
         <TouchableOpacity
           onPress={handleExport}
-          disabled={exporting || completed.length === 0}
+          disabled={exporting || confirmed.length === 0}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Feather
-            name="download"
-            size={20}
-            color={completed.length > 0 ? colors.primary : colors.mutedForeground}
-          />
+          <Feather name="download" size={20} color={confirmed.length > 0 ? colors.primary : colors.mutedForeground} />
         </TouchableOpacity>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: bottomPad + 80 }]}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[styles.content, { paddingBottom: bottomPad + 80 }]}
+      >
+        {/* Stats */}
         <View style={styles.statsRow}>
           <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.statValue, { color: colors.primary }]}>{completed.length}</Text>
-            <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Reviewed</Text>
+            <Text style={[styles.statValue, { color: colors.primary }]}>{confirmed.length}</Text>
+            <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Confirmed</Text>
           </View>
           <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Text style={[styles.statValue, { color: avgScore !== null ? colors.accent : colors.mutedForeground }]}>
@@ -111,39 +107,45 @@ export default function ResultsScreen() {
           </View>
         </View>
 
+        {/* Question summary */}
         <View style={styles.keySection}>
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Answer Key</Text>
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Question Summary</Text>
           <View style={[styles.keyBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={styles.keyGrid}>
-              {currentAssessment.answerKey.map((a, i) => (
-                <View key={i} style={styles.keyItem}>
-                  <Text style={[styles.keyQ, { color: colors.mutedForeground }]}>{i + 1}</Text>
-                  <Text style={[styles.keyA, { color: colors.primary }]}>{a ?? '—'}</Text>
+              {currentAssessment.questions.map(q => (
+                <View key={q.id} style={styles.keyItem}>
+                  <Text style={[styles.keyQ, { color: colors.mutedForeground }]}>{q.number}</Text>
+                  <Text style={[styles.keyType, { color: colors.primary }]}>
+                    {q.type === 'mcq' ? q.correctAnswer ?? '—'
+                      : q.type === 'true_false' ? (q.correctBoolean === true ? 'T' : q.correctBoolean === false ? 'F' : '—')
+                      : `${q.weight}p`}
+                  </Text>
                 </View>
               ))}
             </View>
           </View>
         </View>
 
+        {/* Pending */}
         {pending.length > 0 && (
           <View style={styles.pendingSection}>
             <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
               Pending Review ({pending.length})
             </Text>
-            {pending.map(p => (
+            {pending.map(r => (
               <TouchableOpacity
-                key={p.id}
-                onPress={() => handleReview(p.id)}
+                key={r.id}
+                onPress={() => handleReview(r.id)}
                 activeOpacity={0.75}
                 style={[styles.pendingCard, { backgroundColor: colors.card, borderColor: colors.warning + '50' }]}
               >
                 <View style={styles.pendingLeft}>
                   <View style={[styles.pendingDot, { backgroundColor: colors.warning }]} />
-                  <Text style={[styles.pendingLabel, { color: colors.foreground }]}>{p.label}</Text>
+                  <Text style={[styles.pendingLabel, { color: colors.foreground }]}>{r.studentName}</Text>
                 </View>
                 <View style={styles.pendingRight}>
                   <Text style={[styles.pendingIssues, { color: colors.warning }]}>
-                    {p.issues.length > 0 ? `${p.issues.length} issue${p.issues.length !== 1 ? 's' : ''}` : 'Tap to review'}
+                    {r.issues.length > 0 ? `${r.issues.length} issue${r.issues.length !== 1 ? 's' : ''}` : 'Tap to review'}
                   </Text>
                   <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
                 </View>
@@ -152,23 +154,24 @@ export default function ResultsScreen() {
           </View>
         )}
 
-        {completed.length > 0 && (
+        {/* Confirmed results */}
+        {confirmed.length > 0 && (
           <View style={styles.completedSection}>
             <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
-              Results ({completed.length})
+              Results ({confirmed.length})
             </Text>
-            {completed.map(p => (
-              <ScoreCard key={p.id} paper={p} />
+            {confirmed.map(r => (
+              <ScoreCard key={r.id} result={r} />
             ))}
           </View>
         )}
 
-        {currentAssessment.papers.length === 0 && (
+        {currentAssessment.results.length === 0 && (
           <View style={styles.empty}>
             <View style={[styles.emptyIcon, { backgroundColor: colors.muted }]}>
               <Feather name="file-text" size={28} color={colors.mutedForeground} />
             </View>
-            <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No papers yet</Text>
+            <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No students yet</Text>
             <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
               Scan papers to start grading
             </Text>
@@ -180,15 +183,8 @@ export default function ResultsScreen() {
         <TouchableOpacity
           onPress={handleExport}
           activeOpacity={0.8}
-          disabled={exporting || completed.length === 0}
-          style={[
-            styles.exportBtn,
-            {
-              borderColor: colors.primary,
-              backgroundColor: colors.card,
-              opacity: completed.length === 0 ? 0.5 : 1,
-            },
-          ]}
+          disabled={exporting || confirmed.length === 0}
+          style={[styles.exportBtn, { borderColor: colors.primary, backgroundColor: colors.card, opacity: confirmed.length === 0 ? 0.5 : 1 }]}
         >
           <Feather name="share" size={16} color={colors.primary} />
           <Text style={[styles.exportBtnText, { color: colors.primary }]}>
@@ -196,7 +192,7 @@ export default function ResultsScreen() {
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          onPress={handleScanMore}
+          onPress={() => router.push('/scan')}
           activeOpacity={0.8}
           style={[styles.scanBtn, { backgroundColor: colors.primary }]}
         >
@@ -211,162 +207,47 @@ export default function ResultsScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingBottom: 14,
-    borderBottomWidth: 1,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 20, paddingBottom: 14, borderBottomWidth: 1,
   },
-  headerTitle: {
-    flex: 1,
-    fontSize: 16,
-    fontFamily: 'Inter_600SemiBold',
-    marginHorizontal: 10,
-  },
-  content: {
-    padding: 16,
-    gap: 20,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  statCard: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    gap: 4,
-  },
-  statValue: {
-    fontSize: 22,
-    fontFamily: 'Inter_700Bold',
-  },
-  statLabel: {
-    fontSize: 11,
-    fontFamily: 'Inter_400Regular',
-  },
+  headerTitle: { flex: 1, fontSize: 16, fontFamily: 'Inter_600SemiBold', marginHorizontal: 10 },
+  content: { padding: 16, gap: 20 },
+  statsRow: { flexDirection: 'row', gap: 10 },
+  statCard: { flex: 1, alignItems: 'center', paddingVertical: 14, borderRadius: 12, borderWidth: 1, gap: 4 },
+  statValue: { fontSize: 22, fontFamily: 'Inter_700Bold' },
+  statLabel: { fontSize: 11, fontFamily: 'Inter_400Regular' },
   keySection: { gap: 10 },
-  sectionTitle: {
-    fontSize: 15,
-    fontFamily: 'Inter_600SemiBold',
-  },
-  keyBox: {
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  keyGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  keyItem: {
-    width: 36,
-    alignItems: 'center',
-  },
-  keyQ: {
-    fontSize: 10,
-    fontFamily: 'Inter_400Regular',
-  },
-  keyA: {
-    fontSize: 16,
-    fontFamily: 'Inter_700Bold',
-  },
+  sectionTitle: { fontSize: 15, fontFamily: 'Inter_600SemiBold' },
+  keyBox: { padding: 14, borderRadius: 12, borderWidth: 1 },
+  keyGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  keyItem: { width: 36, alignItems: 'center' },
+  keyQ: { fontSize: 10, fontFamily: 'Inter_400Regular' },
+  keyType: { fontSize: 14, fontFamily: 'Inter_700Bold' },
   pendingSection: { gap: 8 },
   pendingCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    padding: 14, borderRadius: 12, borderWidth: 1,
   },
-  pendingLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  pendingDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  pendingLabel: {
-    fontSize: 14,
-    fontFamily: 'Inter_500Medium',
-  },
-  pendingRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  pendingIssues: {
-    fontSize: 12,
-    fontFamily: 'Inter_500Medium',
-  },
+  pendingLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  pendingDot: { width: 8, height: 8, borderRadius: 4 },
+  pendingLabel: { fontSize: 14, fontFamily: 'Inter_500Medium' },
+  pendingRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  pendingIssues: { fontSize: 12, fontFamily: 'Inter_500Medium' },
   completedSection: { gap: 8 },
-  empty: {
-    alignItems: 'center',
-    paddingVertical: 40,
-    gap: 10,
-  },
-  emptyIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 4,
-  },
-  emptyTitle: {
-    fontSize: 17,
-    fontFamily: 'Inter_600SemiBold',
-  },
-  emptyText: {
-    fontSize: 13,
-    fontFamily: 'Inter_400Regular',
-    textAlign: 'center',
-  },
-  footer: {
-    flexDirection: 'row',
-    gap: 10,
-    padding: 16,
-    borderTopWidth: 1,
-  },
+  empty: { alignItems: 'center', paddingVertical: 40, gap: 10 },
+  emptyIcon: { width: 64, height: 64, borderRadius: 18, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
+  emptyTitle: { fontSize: 17, fontFamily: 'Inter_600SemiBold' },
+  emptyText: { fontSize: 13, fontFamily: 'Inter_400Regular', textAlign: 'center' },
+  footer: { flexDirection: 'row', gap: 10, padding: 16, borderTopWidth: 1 },
   exportBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 18,
-    paddingVertical: 14,
-    borderRadius: 14,
-    borderWidth: 1.5,
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingHorizontal: 18, paddingVertical: 14, borderRadius: 14, borderWidth: 1.5,
   },
-  exportBtnText: {
-    fontSize: 15,
-    fontFamily: 'Inter_600SemiBold',
-  },
+  exportBtnText: { fontSize: 15, fontFamily: 'Inter_600SemiBold' },
   scanBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 14,
-    borderRadius: 14,
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, paddingVertical: 14, borderRadius: 14,
   },
-  scanBtnText: {
-    color: '#fff',
-    fontSize: 16,
-    fontFamily: 'Inter_600SemiBold',
-  },
-  errorText: {
-    textAlign: 'center',
-    marginTop: 60,
-    fontSize: 16,
-    fontFamily: 'Inter_400Regular',
-  },
+  scanBtnText: { color: '#fff', fontSize: 16, fontFamily: 'Inter_600SemiBold' },
+  errorText: { textAlign: 'center', marginTop: 60, fontSize: 16, fontFamily: 'Inter_400Regular' },
 });
