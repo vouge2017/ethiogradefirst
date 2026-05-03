@@ -1,0 +1,153 @@
+We need to re-center the EthioGrade project.
+
+Important correction:
+EthioGrade is not just a simple grading demo. It is the foundation for an end-to-end AI agent for teachers in Ethiopia. However, we must not build the full AI agent now. The immediate milestone is a classroom-usable offline grading MVP.
+
+Current milestone:
+Milestone 1 — Classroom-Usable MVP
+
+Goal:
+A teacher can use the app in one real classroom session without internet:
+1. Create quick assessment
+2. Enter answer key
+3. Grade papers by camera scan OR manual entry
+4. Add student name/student ID
+5. Review and correct answers
+6. Confirm/save result
+7. Export useful CSV
+8. Restart app and still find results
+
+Before coding:
+1. Run git status.
+2. Create or switch to branch:
+   feature/classroom-mvp-hardening
+3. Commit current state first with:
+   chore: checkpoint initial EthioGrade Expo prototype
+4. Push the branch to GitHub if remote is configured.
+5. Then perform the audit below.
+
+Audit required:
+Do not add features before answering this audit.
+
+A. Stack and structure
+- Confirm whether this is Expo/React Native or Flutter.
+- List main folders and important files.
+- Explain navigation structure.
+- Confirm whether route conflicts are fully resolved.
+
+B. Current grading workflow
+- Can teacher create quick assessment?
+- Can teacher enter answer key?
+- Can teacher scan/import paper?
+- Can teacher review detected answers?
+- Can teacher correct answers?
+- Can teacher confirm/save result?
+- Can teacher export CSV?
+- Does data persist after app restart?
+
+C. OMR truth check
+- Is OMR real image-based bubble detection or simulated/mock?
+- Show exact file/function where OMR happens.
+- Explain the algorithm.
+- Does it output SINGLE, BLANK, MULTIPLE, LOW_CONFIDENCE?
+- Does it produce reason codes?
+- What failure cases are handled?
+
+D. Android readiness
+- Has it been tested on Android device/emulator, not only web?
+- Does camera permission work?
+- Does image import work?
+- Does CSV export/share work on Android?
+- Does offline storage work?
+- What Android permissions are requested?
+
+E. GitHub readiness
+- Confirm branch name.
+- Confirm current commit hash.
+- Confirm remote URL exists.
+- Confirm push status.
+- If push fails, explain exact reason.
+
+After the audit, implement only P1 items:
+
+P1.1 Student identity
+- Add student name input before confirming a result.
+- Add optional student ID/roll number.
+- Save these fields in the result model.
+- Show them in Results screen.
+- Include them in CSV export.
+- If empty, fallback to Paper 1, Paper 2, etc.
+
+P1.2 Manual entry mode
+- Add Manual Entry button from Quick Assessment or Scan screen.
+- Teacher can enter student name/student ID.
+- Teacher can tap A/B/C/D per question.
+- Calculate score using the same answer key.
+- Save result using the same result model as scanned results.
+- Export manual and scanned results in the same CSV format.
+
+P1.3 OMR honesty and hardening
+- If OMR is real, add clear test notes and failure handling.
+- If OMR is mock/simulated, rename it clearly as prototype/mock and do not claim production OMR.
+- Keep teacher review mandatory for uncertain results.
+- Do not silently grade low-confidence scans.
+
+P1.4 Android practical test
+- Verify app can run on Android.
+- Verify camera/image import if supported.
+- Verify offline local storage.
+- Verify CSV export/share.
+- Document blockers if any.
+
+Required files to update/create:
+1. docs/PROJECT_VISION.md
+   - Explain long-term vision: end-to-end AI agent for teachers.
+   - Explain current milestone: offline grading MVP.
+   - Explain what is intentionally NOT being built yet.
+
+2. docs/MILESTONE_1_CLASSROOM_MVP.md
+   - Define done criteria for classroom MVP.
+   - Include teacher workflow checklist.
+   - Include P1/P2/P3 priorities.
+
+3. docs/AI_AGENT_ROADMAP.md
+   - Future agents:
+     - Grading Agent
+     - Assessment Agent
+     - Feedback Agent
+     - Class Performance Agent
+     - Parent Communication Agent
+     - Teacher Admin Agent
+   - Mark all AI agent features as future phases, not current MVP.
+
+4. docs/OMR_STATUS.md
+   - State whether OMR is real or mock.
+   - Explain supported template.
+   - Explain limitations.
+   - Explain test cases.
+
+5. docs/GITHUB_COMMIT_LOG.md
+   - Record branch, commit hash, and summary of changes.
+
+Commit requirements:
+Make separate commits:
+1. chore: checkpoint initial EthioGrade Expo prototype
+2. docs: define EthioGrade teacher-agent vision and classroom MVP
+3. feat: add student identity to grading results and CSV export
+4. feat: add manual entry grading flow
+5. docs: document OMR status and Android readiness
+
+Final response required:
+- Branch name
+- Commit hashes
+- Files changed
+- What works now
+- What is still blocked
+- Whether app is ready for classroom pilot
+- Whether app is ready for Play Store internal testing
+- Do not claim Play Store readiness unless Android build/export/signing path is verified.
+
+Important:
+Do not work on Play Store submission yet.
+Do not build essay grading, OCR, login, backend, payment, or full AI agent yet.
+This milestone is about making the core grading workflow real and usable.

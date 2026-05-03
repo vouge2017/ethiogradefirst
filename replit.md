@@ -25,22 +25,26 @@ Offline-first Ethiopian exam grading app built with Expo + React Native.
 
 **Key Features:**
 - Quick Assessment mode (no student database required)
-- OMR detection with confidence classification (SINGLE/BLANK/MULTIPLE/LOW_CONFIDENCE)
-- Teacher review screen with per-question correction
+- OMR detection — PROTOTYPE SIMULATION ONLY (Math.random(), imageUri never read)
+- Confidence classification: SINGLE / BLANK / MULTIPLE / LOW_CONFIDENCE
+- Manual Entry mode — bypass camera, tap A–E per question
+- Student name + optional ID on every result
+- Teacher review screen with per-question correction (mandatory before confirm)
 - Results screen with class stats (avg, pass rate)
-- CSV export via Android Share sheet
+- CSV export: Student Name, Student ID, Score, Max, %, per-question answers
 - Fully offline — all data in AsyncStorage
 
-**Navigation:** Stack-based (no tabs) — index → setup → scan → review → results
+**Navigation:** Stack-based — index → setup → scan → (review | manual) → results
 
-**Release Docs:** `artifacts/mobile/docs/release/`
-- PLAY_STORE_RELEASE_CHECKLIST.md
-- STORE_LISTING_DRAFT.md
-- PRIVACY_POLICY_DRAFT.md
-- DATA_SAFETY_NOTES.md
-- INTERNAL_TESTING_PLAN.md
-- KNOWN_LIMITATIONS.md
-- TEACHER_PILOT_SCRIPT.md
+**Important:** OMR is simulated. See `docs/OMR_STATUS.md`. Not ready for Play Store.
+
+**Docs:** `artifacts/mobile/docs/`
+- PROJECT_VISION.md — long-term AI agent vision, current milestone scope
+- MILESTONE_1_CLASSROOM_MVP.md — done criteria, P1/P2/P3 checklist
+- AI_AGENT_ROADMAP.md — 6 future AI agents, all phase 2+
+- OMR_STATUS.md — simulation details, limitations, upgrade path
+- GITHUB_COMMIT_LOG.md — branch, commit history, GitHub setup instructions
+- `release/` — Play Store draft docs (not ready for submission)
 
 ### API Server (`artifacts/api-server`)
 Express 5 + TypeScript server. Currently serves health check only.

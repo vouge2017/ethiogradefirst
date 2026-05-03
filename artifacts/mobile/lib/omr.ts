@@ -1,3 +1,16 @@
+/**
+ * PROTOTYPE / SIMULATION — NOT REAL OMR
+ *
+ * This module simulates Optical Mark Recognition (OMR) using Math.random().
+ * The `imageUri` parameter is accepted but NEVER READ. No image processing
+ * takes place. All detection results are randomly generated.
+ *
+ * This simulation exists to make the teacher review flow functional during
+ * development. It must be replaced with real bubble-detection logic before
+ * EthioGrade is used for actual grading decisions.
+ *
+ * See docs/OMR_STATUS.md for full details, limitations, and the upgrade path.
+ */
 import type { Answer, DetectionStatus, IssueCode, QuestionDetection, PaperResult } from './types';
 
 const ANSWERS: Answer[] = ['A', 'B', 'C', 'D', 'E'];
