@@ -12,4 +12,4 @@ fi
 git remote remove github 2>/dev/null || true
 git remote add github "https://vouge2017:${GITHUB_PERSONAL_ACCESS_TOKEN}@github.com/vouge2017/ethiogradefirst.git"
 trap 'git remote remove github >/dev/null 2>&1 || true' EXIT
-git push github main
+git push github main --force-with-lease || git push github main --force
