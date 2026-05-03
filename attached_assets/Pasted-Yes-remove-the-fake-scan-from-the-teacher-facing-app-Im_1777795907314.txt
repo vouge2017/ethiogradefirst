@@ -1,0 +1,159 @@
+Yes, remove the fake scan from the teacher-facing app.
+
+Important:
+Do not leave any Math.random() scan result in the production/classroom flow.
+Fake scan destroys trust. EthioGrade v0.1 should be an honest manual grading tool, not a fake OMR app.
+
+New product positioning:
+EthioGrade v0.1 = Offline manual exam scoring assistant for teachers.
+
+Do not call it:
+- AI scanner
+- OMR scanner
+- automatic paper scanner
+- computer vision grader
+
+Current v0.1 promise:
+A teacher can create an assessment, define mixed question types, assign weights, enter student answers manually, calculate weighted scores, save results offline, view class statistics, and export/share CSV.
+
+Required changes:
+
+P1. Remove fake scan from production flow
+- Remove or hide the “Scan Paper” button from the main teacher workflow.
+- Delete or isolate any Math.random() fake detection code.
+- If keeping it for development, move it behind a clearly named dev-only file/function:
+  mockOmrDetector.dev.ts
+- Do not allow mock scan to be accessible in normal app use.
+- Add a visible “Scanning coming soon” roadmap note if needed.
+
+P2. Strengthen manual grading flow
+Manual entry must be excellent because this is now the real v0.1 product.
+
+Confirm and improve:
+- Student name required or strongly prompted.
+- Student ID/roll number optional.
+- MCQ questions: A/B/C/D/E selection.
+- True/False questions: True/False selection.
+- Short Answer: manual score from 0 to question weight.
+- Matching: manual score from 0 to question weight.
+- Weight validation.
+- Total earned points.
+- Total possible points.
+- Percentage.
+- Save result.
+- Edit/correct result if possible.
+- Results persist after app restart.
+
+P3. Improve assessment setup
+Confirm setup supports:
+- Assessment title.
+- Question count.
+- Four question types:
+  - Multiple Choice
+  - True/False
+  - Short Answer
+  - Matching
+- Per-question weight.
+- Correct answer for MCQ.
+- Correct answer for True/False.
+- Expected answer/marking note for Short Answer.
+- Matching key/note for Matching.
+- Total points preview.
+- Validation before starting grading.
+
+P4. Improve results and export
+CSV export must include:
+- Assessment title
+- Student name
+- Student ID
+- Earned points
+- Total points
+- Percentage
+- Grade band
+- Per-question responses
+- Manual scores
+- Confirmed date/time
+
+Results screen should show:
+- Number of graded students
+- Average score
+- Median score if already implemented
+- Highest/lowest score
+- Grade distribution
+- Pass rate
+- Export/share CSV
+
+P5. Add honest roadmap documents
+Create or update:
+
+docs/PRODUCT_POSITIONING_V0_1.md
+Explain:
+- EthioGrade v0.1 is an offline manual grading and scoring assistant.
+- Scanning/OMR is not included in v0.1.
+- The app does not auto-read paper images yet.
+- The goal is to validate teacher workflow first.
+
+docs/SCANNING_ROADMAP.md
+Explain three future paths:
+1. Fixed-template OMR
+2. ML Kit / image-processing assisted scanning
+3. Full computer vision OMR later
+
+docs/OMR_STATUS.md
+Clearly state:
+- Current teacher-facing version has no real OMR.
+- Previous mock/random scan has been removed from production flow.
+- Real scanning is future work.
+
+P6. Test full manual workflow
+Test this exact scenario:
+
+1. Create assessment:
+   - Q1 MCQ, weight 1, answer A
+   - Q2 True/False, weight 1, answer True
+   - Q3 Short Answer, weight 3
+   - Q4 Matching, weight 4
+2. Enter student:
+   - Name: Test Student
+   - ID: 001
+3. Grade:
+   - Q1: A
+   - Q2: False
+   - Q3: 2/3
+   - Q4: 3/4
+4. Confirm result.
+5. Verify total:
+   - Earned = 1 + 0 + 2 + 3 = 6
+   - Total = 9
+   - Percentage = 66.67%
+6. Check Results screen.
+7. Export CSV.
+8. Restart app.
+9. Confirm result still exists.
+
+P7. GitHub commits
+Make clean commits:
+
+1. chore: checkpoint current mixed-question grading app
+2. fix: remove fake scan from teacher workflow
+3. feat: polish manual grading as v0.1 core flow
+4. docs: reposition v0.1 as offline manual grading assistant
+5. docs: add scanning and OMR roadmap
+6. test: verify weighted mixed-question manual workflow
+
+Final response required:
+- Branch name
+- Commit hashes
+- Files changed
+- Confirmation that fake scan is removed from production flow
+- Confirmation whether any mock OMR code remains and where
+- Manual workflow test result
+- CSV export test result
+- Offline persistence test result
+- Whether app is ready for teacher pilot
+- Whether app is ready for Play Store internal testing
+
+Do not work on real OMR now.
+Do not add AI essay grading.
+Do not add backend/login/payment.
+Do not claim scanning works.

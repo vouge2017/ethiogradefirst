@@ -315,7 +315,7 @@ export default function ManualEntryScreen() {
       responses,
       earnedPoints,
       totalPoints,
-      percentage: totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0,
+      percentage: totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 10000) / 100 : 0,
       issues: [],
       gradingSource: 'manual',
       confirmedAt: Date.now(),

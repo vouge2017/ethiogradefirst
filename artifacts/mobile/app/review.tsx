@@ -121,7 +121,7 @@ export default function ReviewScreen() {
       responses: finalResponses,
       earnedPoints,
       totalPoints,
-      percentage: totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0,
+      percentage: totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 10000) / 100 : 0,
       confirmedAt: Date.now(),
     };
 
@@ -394,6 +394,22 @@ export default function ReviewScreen() {
 
               {(question.type === 'short_answer' || question.type === 'matching') && (
                 <>
+                  {question.expectedAnswer ? (
+                    <View style={[styles.keyRow, { backgroundColor: colors.muted, borderRadius: 8, padding: 10 }]}>
+                      <Text style={[styles.keyLabel, { color: colors.mutedForeground }]}>Expected: </Text>
+                      <Text style={[styles.keyValue, { color: colors.foreground, fontSize: 13, fontFamily: 'Inter_400Regular', flex: 1 }]}>
+                        {question.expectedAnswer}
+                      </Text>
+                    </View>
+                  ) : null}
+                  {question.matchingPairs ? (
+                    <View style={[styles.keyRow, { backgroundColor: colors.muted, borderRadius: 8, padding: 10 }]}>
+                      <Text style={[styles.keyLabel, { color: colors.mutedForeground }]}>Pairs: </Text>
+                      <Text style={[styles.keyValue, { color: colors.foreground, fontSize: 13, fontFamily: 'Inter_400Regular', flex: 1 }]}>
+                        {question.matchingPairs}
+                      </Text>
+                    </View>
+                  ) : null}
                   <Text style={[styles.answerLabel, { color: colors.mutedForeground }]}>
                     Score (0 – {question.weight} pts)
                   </Text>

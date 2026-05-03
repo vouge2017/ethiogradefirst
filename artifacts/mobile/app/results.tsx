@@ -108,9 +108,14 @@ export default function ResultsScreen() {
   const passRate = confirmed.length > 0
     ? Math.round((confirmed.filter(r => r.percentage >= 50).length / confirmed.length) * 100)
     : null;
-  const highest = confirmed.length > 0
-    ? Math.max(...confirmed.map(r => r.percentage))
-    : null;
+  const highest = confirmed.length > 0 ? Math.max(...confirmed.map(r => r.percentage)) : null;
+  const lowest = confirmed.length > 0 ? Math.min(...confirmed.map(r => r.percentage)) : null;
+  const median = (() => {
+    if (confirmed.length === 0) return null;
+    const sorted = [...confirmed].map(r => r.percentage).sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+  })();
 
   const handleExport = useCallback(async () => {
     if (confirmed.length === 0) {
@@ -166,7 +171,7 @@ export default function ResultsScreen() {
           </View>
         )}
 
-        {/* Stats row */}
+        {/* Stats rows */}
         <View style={styles.statsRow}>
           <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Text style={[styles.statValue, { color: colors.primary }]}>{confirmed.length}</Text>
@@ -176,7 +181,7 @@ export default function ResultsScreen() {
             <Text style={[styles.statValue, { color: avgScore !== null ? colors.accent : colors.mutedForeground }]}>
               {avgScore !== null ? `${avgScore}%` : '—'}
             </Text>
-            <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Class Avg</Text>
+            <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Average</Text>
           </View>
           <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Text style={[styles.statValue, { color: passRate !== null ? colors.success : colors.mutedForeground }]}>
@@ -184,13 +189,29 @@ export default function ResultsScreen() {
             </Text>
             <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Pass Rate</Text>
           </View>
-          <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.statValue, { color: highest !== null ? colors.success : colors.mutedForeground }]}>
-              {highest !== null ? `${highest}%` : '—'}
-            </Text>
-            <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Highest</Text>
-          </View>
         </View>
+        {confirmed.length > 0 && (
+          <View style={styles.statsRow}>
+            <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Text style={[styles.statValue, { color: colors.success }]}>
+                {highest !== null ? `${highest}%` : '—'}
+              </Text>
+              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Highest</Text>
+            </View>
+            <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Text style={[styles.statValue, { color: colors.accent }]}>
+                {median !== null ? `${median}%` : '—'}
+              </Text>
+              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Median</Text>
+            </View>
+            <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Text style={[styles.statValue, { color: lowest !== null && lowest < 50 ? colors.destructive : colors.foreground }]}>
+                {lowest !== null ? `${lowest}%` : '—'}
+              </Text>
+              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Lowest</Text>
+            </View>
+          </View>
+        )}
 
         {/* Grade distribution */}
         {confirmed.length > 0 && (

@@ -1,8 +1,18 @@
-import React, { useCallback, useState } from 'react';
+/**
+ * Grading Session Hub — EthioGrade v0.1
+ *
+ * This screen is the entry point for grading students in an active assessment.
+ * It shows grading progress and routes teachers to Manual Entry.
+ *
+ * NOTE: Camera/OMR scanning is NOT available in v0.1.
+ * The fake Math.random() scan has been removed from this production flow.
+ * See lib/omr.mock.dev.ts for the isolated mock (dev reference only).
+ * See docs/SCANNING_ROADMAP.md for the plan to add real scanning in v0.2+.
+ */
+import React from 'react';
 import {
-  ActivityIndicator,
-  Image,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -10,219 +20,206 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as Haptics from 'expo-haptics';
 import { useColors } from '@/hooks/useColors';
 import { useAssessment } from '@/context/AssessmentContext';
-import { mockOmrDetection } from '@/lib/omr';
 
-export default function ScanScreen() {
+export default function GradingHubScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { currentAssessment, addResult } = useAssessment();
-  const [processing, setProcessing] = useState(false);
-  const [capturedUri, setCapturedUri] = useState<string | null>(null);
-  const [debugMsg, setDebugMsg] = useState<string | null>(null);
-  const [webCameraMsg, setWebCameraMsg] = useState<string | null>(null);
+  const { currentAssessment } = useAssessment();
 
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 34 : insets.bottom;
 
-  const paperIndex = currentAssessment?.results.length ?? 0;
-
-  const processImage = useCallback(async (uri: string) => {
-    if (!currentAssessment) return;
-    console.log('[Scan] processImage called, paperIndex:', paperIndex);
-    setCapturedUri(uri);
-    setProcessing(true);
-    setDebugMsg('Running detection simulation...');
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
-    await new Promise(res => setTimeout(res, 900));
-
-    const draft = mockOmrDetection(uri, currentAssessment, paperIndex);
-    console.log('[Scan] Draft created id:', draft.id, 'source:', draft.gradingSource, 'issues:', draft.issues);
-
-    await addResult(draft);
-    setProcessing(false);
-    setCapturedUri(null);
-    setDebugMsg(null);
-
-    console.log('[Scan] Navigating to review with resultId:', draft.id);
-    router.push({ pathname: '/review', params: { resultId: draft.id } });
-  }, [currentAssessment, paperIndex, addResult]);
-
-  const handleCamera = useCallback(async () => {
-    console.log('[Scan] Camera pressed, platform:', Platform.OS);
-    if (Platform.OS === 'web') {
-      setWebCameraMsg('Camera scanning requires the Android or iOS app. Use "Import" or "Enter Manually" on web.');
-      return;
-    }
-    setWebCameraMsg(null);
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    console.log('[Scan] Camera permission:', status);
-    if (status !== 'granted') {
-      setDebugMsg('Camera permission denied. Use Import or Manual Entry instead.');
-      return;
-    }
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ['images'],
-      quality: 0.85,
-      allowsEditing: false,
-    });
-    if (!result.canceled && result.assets[0]) {
-      await processImage(result.assets[0].uri);
-    }
-  }, [processImage]);
-
-  const handleGallery = useCallback(async () => {
-    console.log('[Scan] Gallery import pressed');
-    setWebCameraMsg(null);
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      setDebugMsg('Gallery permission denied. Try Manual Entry instead.');
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      quality: 0.85,
-      allowsEditing: false,
-    });
-    if (!result.canceled && result.assets[0]) {
-      await processImage(result.assets[0].uri);
-    }
-  }, [processImage]);
-
   if (!currentAssessment) {
     return (
       <View style={[styles.root, { backgroundColor: colors.background }]}>
-        <Text style={[styles.errorText, { color: colors.destructive }]}>No active assessment.</Text>
+        <View style={[styles.header, { paddingTop: topPad + 12, borderBottomColor: colors.border }]}>
+          <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Feather name="arrow-left" size={22} color={colors.foreground} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: colors.foreground }]}>Grade Students</Text>
+          <View style={{ width: 40 }} />
+        </View>
+        <View style={styles.centered}>
+          <Text style={[styles.errorText, { color: colors.destructive }]}>
+            No active assessment. Go back and open one.
+          </Text>
+        </View>
       </View>
     );
   }
 
-  const confirmedCount = currentAssessment.results.filter(r => r.confirmedAt > 0).length;
+  const confirmed = currentAssessment.results.filter(r => r.confirmedAt > 0);
+  const pending = currentAssessment.results.filter(r => r.confirmedAt === 0);
+  const nextStudentNum = currentAssessment.results.length + 1;
+  const expected = currentAssessment.expectedPaperCount;
+
+  const progressPct = expected
+    ? Math.min(100, Math.round((confirmed.length / expected) * 100))
+    : null;
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
+      {/* Header */}
       <View style={[styles.header, { paddingTop: topPad + 12, borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Feather name="arrow-left" size={22} color={colors.foreground} />
         </TouchableOpacity>
-        <View style={styles.headerCenter}>
-          <Text style={[styles.headerTitle, { color: colors.foreground }]} numberOfLines={1}>
-            {currentAssessment.title}
+        <Text style={[styles.headerTitle, { color: colors.foreground }]} numberOfLines={1}>
+          Grade Students
+        </Text>
+        <TouchableOpacity
+          onPress={() => router.push('/results')}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          disabled={confirmed.length === 0}
+        >
+          <Text style={[styles.resultsLink, { color: confirmed.length > 0 ? colors.primary : colors.mutedForeground }]}>
+            Results
           </Text>
-          <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>
-            Student {paperIndex + 1}
-            {currentAssessment.expectedPaperCount ? ` of ${currentAssessment.expectedPaperCount}` : ''}
-          </Text>
-        </View>
-        {confirmedCount > 0 ? (
-          <TouchableOpacity onPress={() => router.push('/results')}>
-            <Text style={[styles.resultsLink, { color: colors.primary }]}>Results</Text>
-          </TouchableOpacity>
-        ) : (
-          <View style={{ width: 50 }} />
-        )}
+        </TouchableOpacity>
       </View>
 
-      <View style={styles.body}>
-        {webCameraMsg && (
-          <View style={[styles.webBanner, { backgroundColor: colors.warning + '18', borderColor: colors.warning + '40' }]}>
-            <Feather name="alert-triangle" size={14} color={colors.warning} />
-            <Text style={[styles.webBannerText, { color: colors.warning }]}>{webCameraMsg}</Text>
-          </View>
-        )}
-        {debugMsg && !processing && (
-          <View style={[styles.debugBanner, { backgroundColor: colors.muted }]}>
-            <Text style={[styles.debugText, { color: colors.mutedForeground }]}>{debugMsg}</Text>
-          </View>
-        )}
-
-        {processing ? (
-          <View style={styles.processingWrap}>
-            {capturedUri && (
-              <Image source={{ uri: capturedUri }} style={styles.preview} resizeMode="contain" />
-            )}
-            <View style={[styles.processingOverlay, { backgroundColor: colors.background + 'cc' }]}>
-              <ActivityIndicator size="large" color={colors.primary} />
-              <Text style={[styles.processingText, { color: colors.foreground }]}>
-                Detecting answers...
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[styles.content, { paddingBottom: bottomPad + 32 }]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Assessment info card */}
+        <View style={[styles.assessmentCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={styles.assessmentCardTop}>
+            <View style={[styles.iconWrap, { backgroundColor: colors.primary + '18' }]}>
+              <Feather name="clipboard" size={22} color={colors.primary} />
+            </View>
+            <View style={styles.assessmentMeta}>
+              <Text style={[styles.assessmentTitle, { color: colors.foreground }]} numberOfLines={2}>
+                {currentAssessment.title}
               </Text>
-              <Text style={[styles.processingHint, { color: colors.mutedForeground }]}>
-                Simulation active — review all results carefully
+              <Text style={[styles.assessmentSub, { color: colors.mutedForeground }]}>
+                {currentAssessment.questions.length} questions · {currentAssessment.totalPoints} pts total
               </Text>
             </View>
           </View>
-        ) : (
-          <View style={styles.scanArea}>
-            <View style={[styles.frameBox, { borderColor: colors.border }]}>
-              <View style={[styles.corner, styles.cornerTL, { borderColor: colors.primary }]} />
-              <View style={[styles.corner, styles.cornerTR, { borderColor: colors.primary }]} />
-              <View style={[styles.corner, styles.cornerBL, { borderColor: colors.primary }]} />
-              <View style={[styles.corner, styles.cornerBR, { borderColor: colors.primary }]} />
-              <View style={styles.frameInner}>
-                <Feather name="file-text" size={48} color={colors.mutedForeground} />
-                <Text style={[styles.frameHint, { color: colors.mutedForeground }]}>
-                  Position the answer sheet within the frame
+
+          {/* Progress bar */}
+          {progressPct !== null && (
+            <View style={styles.progressSection}>
+              <View style={styles.progressLabelRow}>
+                <Text style={[styles.progressLabel, { color: colors.mutedForeground }]}>
+                  {confirmed.length} of {expected} students graded
                 </Text>
+                <Text style={[styles.progressPct, { color: colors.primary }]}>{progressPct}%</Text>
+              </View>
+              <View style={[styles.progressTrack, { backgroundColor: colors.muted }]}>
+                <View style={[styles.progressFill, { backgroundColor: colors.primary, width: `${progressPct}%` as any }]} />
               </View>
             </View>
-
-            <TouchableOpacity
-              onPress={() => router.push('/manual')}
-              activeOpacity={0.8}
-              style={[styles.manualBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
-            >
-              <Feather name="edit-3" size={16} color={colors.foreground} />
-              <Text style={[styles.manualBtnText, { color: colors.foreground }]}>
-                Enter answers manually
-              </Text>
-              <Feather name="chevron-right" size={14} color={colors.mutedForeground} />
-            </TouchableOpacity>
-
-            <View style={[styles.tipBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <Feather name="sun" size={14} color={colors.mutedForeground} />
-              <Text style={[styles.tipText, { color: colors.mutedForeground }]}>
-                Good lighting improves accuracy. Avoid shadows and glare.
-              </Text>
-            </View>
-          </View>
-        )}
-      </View>
-
-      {!processing && (
-        <View style={[styles.footer, { paddingBottom: bottomPad + 12, borderTopColor: colors.border, backgroundColor: colors.background }]}>
-          <View style={styles.footerRow}>
-            <TouchableOpacity
-              onPress={handleGallery}
-              activeOpacity={0.8}
-              style={[styles.galleryBtn, { borderColor: colors.primary, backgroundColor: colors.card }]}
-            >
-              <Feather name="image" size={20} color={colors.primary} />
-              <Text style={[styles.galleryBtnText, { color: colors.primary }]}>Import</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleCamera}
-              activeOpacity={0.8}
-              style={[styles.cameraBtn, { backgroundColor: colors.primary }]}
-            >
-              <Feather name="camera" size={22} color="#fff" />
-              <Text style={styles.cameraBtnText}>Scan Paper</Text>
-            </TouchableOpacity>
-          </View>
-          {confirmedCount > 0 && (
-            <TouchableOpacity onPress={() => router.push('/results')} style={styles.finishLink}>
-              <Text style={[styles.finishLinkText, { color: colors.mutedForeground }]}>
-                Done — view {confirmedCount} confirmed result{confirmedCount !== 1 ? 's' : ''}
-              </Text>
-              <Feather name="chevron-right" size={14} color={colors.mutedForeground} />
-            </TouchableOpacity>
           )}
         </View>
-      )}
+
+        {/* Status row */}
+        <View style={styles.statusRow}>
+          <View style={[styles.statusCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={[styles.statusDot, { backgroundColor: colors.success }]} />
+            <Text style={[styles.statusNum, { color: colors.foreground }]}>{confirmed.length}</Text>
+            <Text style={[styles.statusLabel, { color: colors.mutedForeground }]}>Confirmed</Text>
+          </View>
+          <View style={[styles.statusCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={[styles.statusDot, { backgroundColor: colors.warning }]} />
+            <Text style={[styles.statusNum, { color: colors.foreground }]}>{pending.length}</Text>
+            <Text style={[styles.statusLabel, { color: colors.mutedForeground }]}>Pending</Text>
+          </View>
+          {expected && (
+            <View style={[styles.statusCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <View style={[styles.statusDot, { backgroundColor: colors.border }]} />
+              <Text style={[styles.statusNum, { color: colors.foreground }]}>{expected}</Text>
+              <Text style={[styles.statusLabel, { color: colors.mutedForeground }]}>Expected</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Pending review list */}
+        {pending.length > 0 && (
+          <View style={styles.pendingSection}>
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
+              Pending Review ({pending.length})
+            </Text>
+            {pending.map(r => (
+              <TouchableOpacity
+                key={r.id}
+                onPress={() => router.push({ pathname: '/review', params: { resultId: r.id } })}
+                activeOpacity={0.75}
+                style={[styles.pendingCard, { backgroundColor: colors.card, borderColor: colors.warning + '50' }]}
+              >
+                <View style={styles.pendingLeft}>
+                  <View style={[styles.pendingDot, { backgroundColor: colors.warning }]} />
+                  <Text style={[styles.pendingName, { color: colors.foreground }]}>{r.studentName}</Text>
+                </View>
+                <View style={styles.pendingRight}>
+                  <Text style={[styles.pendingHint, { color: colors.warning }]}>Tap to confirm</Text>
+                  <Feather name="chevron-right" size={15} color={colors.mutedForeground} />
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        {/* Primary CTA */}
+        <View style={styles.ctaSection}>
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Grade a Student</Text>
+
+          <TouchableOpacity
+            onPress={() => router.push('/manual')}
+            activeOpacity={0.85}
+            style={[styles.gradeBtn, { backgroundColor: colors.primary }]}
+          >
+            <Feather name="edit-3" size={20} color="#fff" />
+            <View style={styles.gradeBtnText}>
+              <Text style={styles.gradeBtnTitle}>
+                {nextStudentNum === 1 ? 'Grade First Student' : `Grade Student ${nextStudentNum}`}
+              </Text>
+              <Text style={styles.gradeBtnSub}>Enter answers and score manually</Text>
+            </View>
+            <Feather name="arrow-right" size={18} color="#fff" />
+          </TouchableOpacity>
+
+          {/* Scan — coming soon */}
+          <View style={[styles.comingSoonBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}>
+            <Feather name="camera" size={18} color={colors.mutedForeground} />
+            <View style={styles.comingSoonText}>
+              <Text style={[styles.comingSoonTitle, { color: colors.mutedForeground }]}>Scan Answer Sheet</Text>
+              <Text style={[styles.comingSoonSub, { color: colors.mutedForeground }]}>Coming in v0.2 — not available yet</Text>
+            </View>
+            <View style={[styles.soonBadge, { backgroundColor: colors.border }]}>
+              <Text style={[styles.soonBadgeText, { color: colors.mutedForeground }]}>Soon</Text>
+            </View>
+          </View>
+
+          <View style={[styles.infoBox, { backgroundColor: colors.muted, borderColor: colors.border }]}>
+            <Feather name="info" size={13} color={colors.mutedForeground} />
+            <Text style={[styles.infoText, { color: colors.mutedForeground }]}>
+              EthioGrade v0.1 is an offline manual grading assistant.
+              Camera-based scanning is planned for a future release.
+            </Text>
+          </View>
+        </View>
+
+        {/* View results CTA */}
+        {confirmed.length > 0 && (
+          <TouchableOpacity
+            onPress={() => router.push('/results')}
+            activeOpacity={0.8}
+            style={[styles.viewResultsBtn, { borderColor: colors.primary, backgroundColor: colors.card }]}
+          >
+            <Feather name="bar-chart-2" size={16} color={colors.primary} />
+            <Text style={[styles.viewResultsText, { color: colors.primary }]}>
+              View Results — {confirmed.length} student{confirmed.length !== 1 ? 's' : ''} graded
+            </Text>
+            <Feather name="chevron-right" size={15} color={colors.primary} />
+          </TouchableOpacity>
+        )}
+      </ScrollView>
     </View>
   );
 }
@@ -233,55 +230,68 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 20, paddingBottom: 14, borderBottomWidth: 1,
   },
-  headerCenter: { flex: 1, alignItems: 'center', paddingHorizontal: 8 },
-  headerTitle: { fontSize: 16, fontFamily: 'Inter_600SemiBold' },
-  headerSub: { fontSize: 12, fontFamily: 'Inter_400Regular' },
-  resultsLink: { fontSize: 14, fontFamily: 'Inter_600SemiBold', width: 50, textAlign: 'right' },
-  body: { flex: 1, padding: 20, gap: 10 },
-  webBanner: {
+  headerTitle: { flex: 1, fontSize: 16, fontFamily: 'Inter_600SemiBold', marginHorizontal: 10 },
+  resultsLink: { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
+  scroll: { flex: 1 },
+  content: { padding: 16, gap: 16 },
+  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
+  errorText: { fontSize: 15, fontFamily: 'Inter_400Regular', textAlign: 'center' },
+  assessmentCard: { padding: 16, borderRadius: 14, borderWidth: 1, gap: 14 },
+  assessmentCardTop: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
+  iconWrap: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  assessmentMeta: { flex: 1, gap: 3 },
+  assessmentTitle: { fontSize: 16, fontFamily: 'Inter_700Bold', lineHeight: 22 },
+  assessmentSub: { fontSize: 13, fontFamily: 'Inter_400Regular' },
+  progressSection: { gap: 6 },
+  progressLabelRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  progressLabel: { fontSize: 12, fontFamily: 'Inter_400Regular' },
+  progressPct: { fontSize: 12, fontFamily: 'Inter_700Bold' },
+  progressTrack: { height: 6, borderRadius: 3, overflow: 'hidden' },
+  progressFill: { height: '100%', borderRadius: 3 },
+  statusRow: { flexDirection: 'row', gap: 10 },
+  statusCard: {
+    flex: 1, padding: 12, borderRadius: 12, borderWidth: 1,
+    alignItems: 'center', gap: 4,
+  },
+  statusDot: { width: 8, height: 8, borderRadius: 4, marginBottom: 2 },
+  statusNum: { fontSize: 22, fontFamily: 'Inter_700Bold' },
+  statusLabel: { fontSize: 11, fontFamily: 'Inter_400Regular' },
+  pendingSection: { gap: 8 },
+  sectionTitle: { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
+  pendingCard: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    padding: 14, borderRadius: 12, borderWidth: 1,
+  },
+  pendingLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  pendingDot: { width: 8, height: 8, borderRadius: 4 },
+  pendingName: { fontSize: 14, fontFamily: 'Inter_500Medium' },
+  pendingRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  pendingHint: { fontSize: 12, fontFamily: 'Inter_500Medium' },
+  ctaSection: { gap: 10 },
+  gradeBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    padding: 16, borderRadius: 14,
+  },
+  gradeBtnText: { flex: 1, gap: 2 },
+  gradeBtnTitle: { color: '#fff', fontSize: 16, fontFamily: 'Inter_700Bold' },
+  gradeBtnSub: { color: 'rgba(255,255,255,0.75)', fontSize: 12, fontFamily: 'Inter_400Regular' },
+  comingSoonBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    padding: 16, borderRadius: 14, borderWidth: 1,
+  },
+  comingSoonText: { flex: 1, gap: 2 },
+  comingSoonTitle: { fontSize: 15, fontFamily: 'Inter_600SemiBold' },
+  comingSoonSub: { fontSize: 11, fontFamily: 'Inter_400Regular' },
+  soonBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  soonBadgeText: { fontSize: 11, fontFamily: 'Inter_600SemiBold' },
+  infoBox: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 8,
-    padding: 10, borderRadius: 10, borderWidth: 1,
+    padding: 12, borderRadius: 10, borderWidth: 1,
   },
-  webBannerText: { flex: 1, fontSize: 13, fontFamily: 'Inter_400Regular', lineHeight: 18 },
-  debugBanner: { padding: 8, borderRadius: 8 },
-  debugText: { fontSize: 12, fontFamily: 'Inter_400Regular' },
-  processingWrap: { flex: 1, position: 'relative' },
-  preview: { flex: 1, borderRadius: 12 },
-  processingOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'center', justifyContent: 'center', gap: 12, borderRadius: 12,
-  },
-  processingText: { fontSize: 17, fontFamily: 'Inter_600SemiBold' },
-  processingHint: { fontSize: 12, fontFamily: 'Inter_400Regular', textAlign: 'center', paddingHorizontal: 24 },
-  scanArea: { flex: 1, gap: 12 },
-  frameBox: { flex: 1, borderRadius: 16, borderWidth: 1, position: 'relative', overflow: 'visible' },
-  corner: { position: 'absolute', width: 28, height: 28, borderWidth: 3 },
-  cornerTL: { top: -2, left: -2, borderRightWidth: 0, borderBottomWidth: 0, borderTopLeftRadius: 8 },
-  cornerTR: { top: -2, right: -2, borderLeftWidth: 0, borderBottomWidth: 0, borderTopRightRadius: 8 },
-  cornerBL: { bottom: -2, left: -2, borderRightWidth: 0, borderTopWidth: 0, borderBottomLeftRadius: 8 },
-  cornerBR: { bottom: -2, right: -2, borderLeftWidth: 0, borderTopWidth: 0, borderBottomRightRadius: 8 },
-  frameInner: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
-  frameHint: { fontSize: 14, fontFamily: 'Inter_400Regular', textAlign: 'center', paddingHorizontal: 24 },
-  manualBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    paddingHorizontal: 16, paddingVertical: 13, borderRadius: 12, borderWidth: 1,
-  },
-  manualBtnText: { flex: 1, fontSize: 14, fontFamily: 'Inter_500Medium' },
-  tipBox: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, borderRadius: 10, borderWidth: 1 },
-  tipText: { flex: 1, fontSize: 12, fontFamily: 'Inter_400Regular' },
-  footer: { padding: 16, borderTopWidth: 1, gap: 10 },
-  footerRow: { flexDirection: 'row', gap: 10 },
-  galleryBtn: {
+  infoText: { flex: 1, fontSize: 12, fontFamily: 'Inter_400Regular', lineHeight: 17 },
+  viewResultsBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    paddingHorizontal: 20, paddingVertical: 14, borderRadius: 14, borderWidth: 1.5,
+    padding: 14, borderRadius: 14, borderWidth: 1.5,
   },
-  galleryBtnText: { fontSize: 15, fontFamily: 'Inter_600SemiBold' },
-  cameraBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 8, paddingVertical: 14, borderRadius: 14,
-  },
-  cameraBtnText: { color: '#fff', fontSize: 16, fontFamily: 'Inter_600SemiBold' },
-  finishLink: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 },
-  finishLinkText: { fontSize: 13, fontFamily: 'Inter_400Regular' },
-  errorText: { textAlign: 'center', marginTop: 60, fontSize: 16, fontFamily: 'Inter_400Regular' },
+  viewResultsText: { flex: 1, fontSize: 14, fontFamily: 'Inter_600SemiBold' },
 });

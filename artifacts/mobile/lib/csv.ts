@@ -8,6 +8,20 @@ function esc(value: string): string {
   return value;
 }
 
+function gradeBand(percentage: number): string {
+  if (percentage >= 90) return 'A';
+  if (percentage >= 80) return 'B';
+  if (percentage >= 70) return 'C';
+  if (percentage >= 60) return 'D';
+  return 'F';
+}
+
+function formatDateTime(ts: number): string {
+  const d = new Date(ts);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 function responseDisplay(q: Question, r: QuestionResponse): string {
   if (r.type === 'mcq') return r.selectedAnswer ?? '—';
   if (r.type === 'true_false') {
@@ -15,16 +29,27 @@ function responseDisplay(q: Question, r: QuestionResponse): string {
     if (r.booleanAnswer === false) return 'F';
     return '—';
   }
-  return `${r.manualScore ?? '—'}/${q.weight}`;
+  return r.manualScore !== undefined ? `${r.manualScore}/${q.weight}` : `—/${q.weight}`;
 }
 
 export function generateCSV(assessment: Assessment): string {
   const rows: string[] = [];
-  const qHeaders = assessment.questions.map(q => `Q${q.number}(${q.type[0].toUpperCase()})`);
-  rows.push(['Student Name', 'Student ID', 'Earned', 'Total', 'Percentage', ...qHeaders].join(','));
+
+  const qHeaders = assessment.questions.map(
+    q => `Q${q.number}(${q.type === 'mcq' ? 'MCQ' : q.type === 'true_false' ? 'T/F' : q.type === 'short_answer' ? 'Short' : 'Match'})`
+  );
+
+  rows.push([
+    'Assessment Title', 'Student Name', 'Student ID',
+    'Earned', 'Total', 'Percentage', 'Grade',
+    'Confirmed At',
+    ...qHeaders,
+  ].join(','));
 
   const keyRow = [
-    'ANSWER KEY', '', '', assessment.totalPoints.toString(), '',
+    esc(assessment.title), 'ANSWER KEY', '',
+    '', assessment.totalPoints.toString(), '', '',
+    '',
     ...assessment.questions.map(q => {
       if (q.type === 'mcq') return q.correctAnswer ?? '—';
       if (q.type === 'true_false') return q.correctBoolean === true ? 'T' : q.correctBoolean === false ? 'F' : '—';
@@ -34,20 +59,24 @@ export function generateCSV(assessment: Assessment): string {
   rows.push(keyRow.join(','));
 
   const confirmed = assessment.results.filter(r => r.confirmedAt > 0);
-  for (const result of confirmed) {
+  for (const result of confirmed.sort((a, b) => b.percentage - a.percentage)) {
     const qCols = assessment.questions.map(q => {
       const resp = result.responses.find(r => r.questionId === q.id);
       return resp ? responseDisplay(q, resp) : '—';
     });
     rows.push([
+      esc(assessment.title),
       esc(result.studentName),
       esc(result.studentId ?? ''),
       result.earnedPoints.toString(),
       result.totalPoints.toString(),
       `${result.percentage}%`,
+      gradeBand(result.percentage),
+      esc(formatDateTime(result.confirmedAt)),
       ...qCols,
     ].join(','));
   }
+
   return rows.join('\n');
 }
 

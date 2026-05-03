@@ -1,90 +1,61 @@
-# OMR Status — EthioGrade Prototype
+# OMR Status — EthioGrade
 
-## Current Status: SIMULATED (Not Real Image Processing)
+## Current Status: NOT IMPLEMENTED
 
-The current OMR (Optical Mark Recognition) implementation is a **prototype simulation**. It does not read or analyze camera images in any way.
-
-**File:** `artifacts/mobile/lib/omr.ts`
-**Function:** `runOMRDetection(imageUri, answerKey, paperIndex)`
-
-The `imageUri` parameter is accepted but never read. All answer detection is performed by `Math.random()`.
+**As of v0.1, EthioGrade has no real optical mark recognition (OMR) or camera scanning.**
 
 ---
 
-## What the Simulation Does
+## History
 
-The simulation models realistic OMR behavior to make teacher review meaningful during development and testing. Per question it randomly assigns one of four detection statuses:
-
-| Status | Probability | Meaning |
-|--------|------------|---------|
-| SINGLE | 72% | One bubble clearly filled — answer recorded |
-| LOW_CONFIDENCE | 13% | Detection uncertain — flagged for teacher review |
-| BLANK | 8% | No bubble filled — flagged for teacher review |
-| MULTIPLE | 7% | Multiple bubbles filled — flagged for teacher review |
-
-When status is SINGLE, the simulation biases toward the correct answer ~70% of the time to model a realistic student error rate.
+| Version | OMR Status |
+|---|---|
+| Early dev builds | Math.random() mock scan — simulated fake answers, never read actual photos |
+| v0.1 (current) | Mock scan removed from teacher flow. Manual grading only. |
+| v0.2 (planned) | Fixed-template OMR — see SCANNING_ROADMAP.md |
 
 ---
 
-## Issue / Reason Codes Produced
+## What Was Removed
 
-| Code | When Triggered |
-|------|---------------|
-| `TEMPLATE_UNSUPPORTED_QUESTION_COUNT` | Question count is not 20 |
-| `TEMPLATE_ALIGNMENT_LOW` | Random 15% chance — simulates sheet misalignment |
-| `LOW_OVERALL_CONFIDENCE` | Average confidence below 0.65 |
-| `QUESTION_REVIEW_REQUIRED` | Any question has needsReview = true |
+The early development builds contained a `mockOmrDetection()` function that:
+- Accepted a photo URI parameter but **never read it**
+- Generated random MCQ/True-False answers using `Math.random()`
+- Simulated "confidence scores" and detection issues
 
----
+This was removed from the teacher-facing app in v0.1 because:
+- It did not provide real value
+- It was misleading — teachers could mistake simulated results for real detections
+- Trust is critical for a grading tool; fake results undermine it
 
-## Teacher Review Behavior
-
-- All LOW_CONFIDENCE, BLANK, and MULTIPLE detections are flagged with `needsReview = true`
-- The review screen displays these prominently and requires the teacher to either confirm or correct each one
-- The teacher can correct any answer (including SINGLE detections) before confirming
-- A paper is not counted in CSV export until `reviewComplete = true`
-- Low-confidence results are never silently graded
+The mock code is preserved in `lib/omr.mock.dev.ts` as a development reference only.
+It is not imported or callable from any production screen.
 
 ---
 
-## Supported Templates
+## What the Teacher Sees in v0.1
 
-Current (simulated): 20-question multiple-choice, A–E options. Other question counts trigger the `TEMPLATE_UNSUPPORTED_QUESTION_COUNT` issue code but still process.
+The "Scan Answer Sheet" button is visible in the Grading Hub but is **disabled** and clearly labeled:
+> "Scan Answer Sheet — Coming in v0.2 — not available yet"
 
-Real OMR (future): Would require a standardized printed answer sheet template with fiducial markers. Template design is not yet finalized.
-
----
-
-## Limitations (Simulation)
-
-- The image is never read — the camera is used only to trigger the grading flow
-- Confidence values are random — they do not reflect actual image quality
-- Alignment issues are random — they do not reflect actual sheet position
-- Results will differ on every scan of the same sheet
+There is no fake scan, no loading animation, no simulated result.
 
 ---
 
-## Path to Real OMR (Phase 2)
+## Real OMR Plan
 
-To replace the simulation with real detection:
-
-1. Design a standardized answer sheet template with timing marks / QR corner anchors
-2. Implement on-device image processing (OpenCV via native module or TensorFlow Lite bubble detector)
-3. Replace `runOMRDetection` with a real implementation — the function signature and return type can stay the same
-4. Run validation tests with physical printed sheets in multiple lighting conditions
-5. Add `OMR_ENGINE_VERSION` to the result model so exported CSVs can track which engine produced each result
+See `docs/SCANNING_ROADMAP.md` for the three paths:
+1. Fixed-template OMR (v0.2)
+2. ML Kit assisted scanning (v0.3)
+3. Full computer vision (v1.0)
 
 ---
 
-## Test Cases (Manual)
+## Files Reference
 
-Because the simulation is random, automated tests for OMR output are not meaningful. Manual test cases to run when real OMR is implemented:
-
-| Test | Expected Result |
-|------|----------------|
-| Well-lit sheet, all bubbles filled | 100% SINGLE, all confidence > 0.85 |
-| Sheet with one bubble torn | BLANK on that question, flagged |
-| Two bubbles filled for one question | MULTIPLE on that question, flagged |
-| Sheet rotated 5 degrees | TEMPLATE_ALIGNMENT_LOW issue |
-| Sheet with pencil marks not erased | LOW_CONFIDENCE on affected questions |
-| Dark room photo | LOW_OVERALL_CONFIDENCE issue |
+| File | Purpose |
+|---|---|
+| `lib/omr.ts` | Production module — exports nothing, documents isolation |
+| `lib/omr.mock.dev.ts` | Dev reference only — contains removed mock code |
+| `app/scan.tsx` | Grading Hub — manual entry only, scanning disabled |
+| `docs/SCANNING_ROADMAP.md` | Future scanning implementation plan |

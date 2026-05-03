@@ -7,6 +7,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -145,12 +146,30 @@ function QuestionCard({
         </View>
       )}
       {(question.type === 'short_answer' || question.type === 'matching') && (
-        <View style={styles.qRow2}>
-          <Feather name="edit-2" size={12} color={colors.mutedForeground} />
-          <Text style={[styles.manualNote, { color: colors.mutedForeground }]}>
-            Scored manually during review · {question.weight} pt{question.weight !== 1 ? 's' : ''}
-          </Text>
-        </View>
+        <>
+          <View style={styles.qRow2}>
+            <Feather name="edit-2" size={12} color={colors.mutedForeground} />
+            <Text style={[styles.manualNote, { color: colors.mutedForeground }]}>
+              Scored manually · {question.weight} pt{question.weight !== 1 ? 's' : ''}
+            </Text>
+          </View>
+          <View style={[styles.qRow2, { alignItems: 'flex-start' }]}>
+            <Feather name="file-text" size={12} color={colors.mutedForeground} style={{ marginTop: 9 }} />
+            <TextInput
+              style={[styles.noteInput, { borderColor: colors.border, backgroundColor: colors.background, color: colors.foreground }]}
+              placeholder={question.type === 'short_answer' ? 'Expected answer / rubric hint (optional)' : 'Matching pairs / key (optional)'}
+              placeholderTextColor={colors.mutedForeground}
+              value={question.type === 'short_answer' ? (question.expectedAnswer ?? '') : (question.matchingPairs ?? '')}
+              onChangeText={text => {
+                if (question.type === 'short_answer') onUpdate(question.id, { expectedAnswer: text || undefined });
+                else onUpdate(question.id, { matchingPairs: text || undefined });
+              }}
+              maxLength={200}
+              multiline
+              returnKeyType="done"
+            />
+          </View>
+        </>
       )}
     </View>
   );
@@ -365,7 +384,7 @@ export default function SetupScreen() {
           <View style={[styles.noticeBanner, { backgroundColor: colors.muted, borderColor: colors.border }]}>
             <Feather name="info" size={12} color={colors.mutedForeground} />
             <Text style={[styles.noticeText, { color: colors.mutedForeground }]}>
-              MCQ and T/F need a correct answer. Short Answer and Matching are scored manually after scanning.
+              MCQ and T/F need a correct answer. Short Answer and Matching are scored manually during grading.
             </Text>
           </View>
 
@@ -454,6 +473,12 @@ const styles = StyleSheet.create({
   tfBtn: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 8, borderWidth: 1 },
   tfBtnText: { fontSize: 13, fontFamily: 'Inter_600SemiBold' },
   manualNote: { fontSize: 12, fontFamily: 'Inter_400Regular', fontStyle: 'italic' },
+  noteInput: {
+    flex: 1, borderWidth: 1, borderRadius: 8,
+    paddingHorizontal: 10, paddingVertical: 7,
+    fontSize: 12, fontFamily: 'Inter_400Regular',
+    minHeight: 34, textAlignVertical: 'top',
+  },
   footer: { paddingHorizontal: 16, paddingTop: 12, borderTopWidth: 1 },
   startBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
