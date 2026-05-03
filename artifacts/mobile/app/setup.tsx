@@ -276,7 +276,7 @@ export default function SetupScreen() {
         <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Feather name="arrow-left" size={22} color={colors.foreground} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.foreground }]}>New Assessment</Text>
+        <Text style={[styles.headerTitle, { color: colors.foreground }]}>Quick Assessment</Text>
         <View style={styles.headerRight}>
           <View style={[styles.progressBadge, { backgroundColor: answeredCount === questionCount ? colors.success + '20' : colors.primary + '15' }]}>
             <Text style={[styles.progressBadgeText, { color: answeredCount === questionCount ? colors.success : colors.primary }]}>

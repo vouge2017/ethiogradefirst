@@ -1,0 +1,430 @@
+You are working on the existing EthioGrade mobile app.
+
+Important:
+Do NOT rebuild the app from scratch.
+Do NOT repeat work that already exists.
+First inspect the current project, dependencies, files, navigation, storage, grading model, docs, and Git status.
+Then continue only from what is missing.
+
+EthioGrade product direction:
+EthioGrade is not only a manual grading app.
+EthioGrade is an offline-first mobile grading lab for teachers.
+
+The long-term goal is to help teachers grade students fast, efficiently, and productively using:
+- Manual grading
+- Master Scan answer key
+- Student paper scanning
+- Confidence scoring
+- Review queue
+- Missing/duplicate tracking
+- Exportable results
+- Future correction-learning and teacher AI assistant features
+
+But we must not fake scanning.
+
+Absolute rules:
+- Do not build fake scanning.
+- Do not use Math.random() for scan results.
+- Do not claim OMR works unless it reads a real image.
+- Do not claim “scan any paper automatically” unless it is actually implemented and tested.
+- Do not add AI chatbot now.
+- Do not add backend/login/payment now.
+- Do not add heavy OCR/ML dependencies without checking app size impact first.
+- Mobile app release size target: keep Android build under 35 MB if possible.
+- If any dependency threatens the size budget, report it before adding it.
+
+Current app assumption:
+The app may already support:
+- Mixed question setup
+- MCQ
+- True/False
+- Short Answer
+- Matching
+- Weights
+- Manual grading
+- Results
+- CSV export
+- Offline storage
+- Docs around manual v0.1 and OMR status
+
+Do not duplicate these if already built.
+Inspect and extend.
+
+==================================================
+PART 1 — PROJECT AUDIT BEFORE CHANGES
+==================================================
+
+Before changing code, report:
+
+1. Stack and project structure
+- Is this Expo/React Native or Flutter?
+- Main folders and files.
+- Navigation structure.
+- Storage mechanism.
+- CSV/export mechanism.
+- Current package/dependency list.
+
+2. Existing product features
+Confirm whether these already exist:
+- Quick Assessment
+- Class Assessment
+- Manual answer key
+- Mixed question types
+- Per-question weights
+- Manual grading
+- Student name/ID
+- Results/statistics
+- CSV export/share
+- Offline persistence
+- Fake scan removed from production flow
+- Mock OMR isolated from production
+
+3. Dependency and size audit
+- List major dependencies.
+- Identify camera/image/OCR/ML dependencies if any.
+- Identify unused heavy dependencies.
+- Estimate risk to 35 MB Android size target.
+- Do not install heavy packages unless approved by the architecture docs or necessary for current task.
+
+4. Git status
+- Current branch.
+- Uncommitted files.
+- Remote URL.
+- Whether push is possible.
+- If Replit blocks git commit directly, explain exact steps or use the available project task mechanism.
+
+==================================================
+PART 2 — CORRECT PRODUCT ARCHITECTURE
+==================================================
+
+EthioGrade has two major modes.
+
+Mode 1: Quick Assessment
+- No class setup required.
+- No student registration required.
+- No long history required.
+- Teacher sets answer key manually or through future Master Scan.
+- Teacher grades students quickly.
+- Student name/ID optional.
+- Useful for one-time fast grading.
+- Can export optionally.
+- Minimal history.
+
+Mode 2: Class Assessment
+- Teacher creates/selects class.
+- Teacher imports/registers students.
+- Teacher creates assessment name.
+- Teacher sets answer key manually or through future Master Scan.
+- Teacher batch scans or manually grades student papers.
+- App detects score, confidence, missing students, duplicate scans, and review-needed papers when scanning exists.
+- Teacher reviews only exceptions.
+- Results are saved, exported, and kept in history.
+
+Important concept: Master Scan
+Master Scan means:
+The teacher marks the correct answers on a paper answer sheet, scans that answer sheet, the app detects the answer key, shows the detected key with confidence, and asks the teacher to confirm/edit. After confirmation, the detected key becomes the answer key for grading student papers.
+
+Master Scan exists to avoid forcing teachers to tap every answer manually on the phone.
+
+Do not implement real Master Scan in this task unless it already exists.
+Do not create fake Master Scan.
+For now, align docs, architecture, navigation labels, and roadmap.
+
+==================================================
+PART 3 — THREE-LANE SCANNING STRATEGY
+==================================================
+
+Important product decision:
+Do not force teachers to use a printable template from day one.
+But also do not promise perfect “scan any paper” grading.
+
+EthioGrade scanning strategy has three lanes:
+
+Lane 1: Any Paper Assist
+- Teacher can scan their existing paper.
+- App may help crop/straighten/read if possible in the future.
+- Teacher confirmation is required.
+- Flexible but slower and lower confidence.
+- Do not claim it can grade 100 students in 5 minutes.
+- Future/experimental.
+
+Lane 2: Guided Paper Layout
+- Teacher can use their own paper, but follows a simple recommended layout.
+- Example:
+  1. A
+  2. C
+  3. True
+  4. B
+- Better accuracy than any paper.
+- Does not require official EthioGrade printed template.
+- Good bridge for adoption.
+
+Lane 3: EthioGrade Printable Template
+- Recommended for high-speed grading.
+- Uses fixed answer sheet with alignment markers.
+- Supports future Master Scan and student scan.
+- Best for batch scanning and large classes.
+- Required for future 50–100 students fast grading.
+
+Product principle:
+The more flexible the paper, the more teacher review is required.
+The more structured the paper, the more automatic and fast grading can be.
+
+Do not implement real scanning now unless already present.
+This task is product architecture, docs, navigation alignment, dependency review, and gap reporting.
+
+==================================================
+PART 4 — REQUIRED DOCS
+==================================================
+
+Create or update the following docs.
+If a file already exists, update it instead of duplicating.
+
+1. docs/PRODUCT_VISION.md
+Define EthioGrade as:
+An offline-first mobile grading lab for teachers.
+
+Include:
+- Current v0.1 manual/hybrid foundation.
+- Long-term teacher AI assistant vision.
+- Why paper-first workflow matters.
+- Why trust and teacher confirmation matter.
+- What is not being built yet.
+
+2. docs/WORKFLOW_MODES.md
+Explain:
+- Quick Assessment
+- Class Assessment
+- Manual answer key
+- Master Scan answer key
+- Student scan
+- Manual fallback
+- Hybrid grading
+- Review queue
+- Missing/duplicate tracking
+
+3. docs/MASTER_SCAN_SPEC.md
+Define:
+- What Master Scan is
+- Why it exists
+- Supported first version
+- Required/guided template strategy
+- Master Scan from EthioGrade Template
+- Master Scan from Guided Layout
+- Any Paper Master Assist as future/experimental
+- Confidence review
+- Teacher confirmation
+- Low-confidence correction
+- Limitations
+- No fake scan rule
+
+4. docs/CLASS_ASSESSMENT_SPEC.md
+Define:
+- Class setup
+- Student import/register
+- Assessment name
+- Answer key setup
+- Batch scan future
+- Manual grading current/fallback
+- Missing students
+- Duplicate scan prevention
+- Review queue
+- Results/export/history
+
+5. docs/QUICK_ASSESSMENT_SPEC.md
+Define:
+- No class required
+- No student registration required
+- Answer key manual or future Master Scan
+- Immediate score
+- Optional export
+- Minimal history
+- Why this helps adoption
+
+6. docs/SCANNING_STRATEGY.md
+Explain:
+- Why we should not force templates too early
+- Why scan-any-paper cannot be promised as fully automatic
+- Three-lane scanning strategy:
+  - Any Paper Assist
+  - Guided Paper Layout
+  - EthioGrade Printable Template
+- Accuracy/speed trade-off
+- Teacher confirmation rules
+- Adoption strategy
+
+7. docs/TEMPLATE_ADOPTION_PLAN.md
+Explain adoption path:
+- Start with manual or existing paper
+- Show confidence limitations
+- Recommend guided layout
+- Offer printable template for fast grading
+- Explain benefits without forcing it
+- How the app should educate teachers through confidence messages
+
+8. docs/ANSWER_SHEET_TEMPLATE_PLAN.md
+Design future templates:
+- 20-question template
+- 50-question template
+- 100-question template
+- Master key sheet
+- Student answer sheet
+- Four corner alignment markers
+- Student ID area
+- Assessment ID / QR placeholder
+- MCQ and True/False support first
+- Short Answer / Matching manual scoring area
+- Low-end printer/photocopy friendly design notes
+
+9. docs/SCANNING_ROADMAP.md
+Update roadmap:
+- v0.1: manual grading and mixed question setup
+- v0.2: guided Master Scan prototype
+- v0.3: fixed-template student scan
+- v0.4: batch scan with confidence and review queue
+- v0.5: correction-learning dataset
+- v0.6: any-paper assist with teacher confirmation
+- v1.0: teacher AI assistant with correction-learning loop
+
+10. docs/SIZE_BUDGET.md
+Create/update:
+- Android app target: under 35 MB if possible.
+- Current major dependencies.
+- Dependencies that may increase size.
+- Rules before adding OCR/ML/camera libraries.
+- Recommended lightweight approach.
+- Release build size check command if available.
+
+==================================================
+PART 5 — APP ARCHITECTURE ALIGNMENT
+==================================================
+
+Inspect current app navigation and labels.
+
+If safe and low-risk, update navigation labels to reflect the correct direction:
+- “Quick Assessment”
+- “Class Assessment”
+- “Manual Grading”
+- “Master Scan — Coming Soon”
+- “Student Scan — Coming Soon”
+- “Review Queue” if already implemented or documented
+- “Templates — Coming Soon” if appropriate
+
+Do not build fake scan screens.
+If scan buttons exist:
+- They must be disabled or marked “Coming Soon”.
+- They must not generate random results.
+- They must not mislead the teacher.
+
+If mock OMR exists:
+- It must be isolated in a dev-only file.
+- It must not be imported into production flow.
+- It must be clearly named:
+  mockOmrDetector.dev.ts
+  or similar.
+
+If lib/omr.ts exists:
+- It should not export fake production OMR.
+- It may export types/interfaces only if useful.
+
+==================================================
+PART 6 — GAP REPORT
+==================================================
+
+After docs and architecture alignment, report gaps against the vision.
+
+Report current app gaps for:
+
+1. Quick Assessment
+- What exists
+- What is missing
+- What must be built next
+
+2. Class Assessment
+- What exists
+- What is missing
+- What must be built next
+
+3. Master Scan
+- What exists
+- What is missing
+- What must be built next
+
+4. Student Scan
+- What exists
+- What is missing
+- What must be built next
+
+5. Three-lane scanning strategy
+- What is documented
+- What is implemented
+- What is future
+
+6. App size and dependency readiness
+- Current risk to 35 MB target
+- Recommended next technical dependency, if any
+- Dependencies to avoid for now
+
+==================================================
+PART 7 — RECOMMENDED NEXT TECHNICAL MILESTONE
+==================================================
+
+Recommend the next technical milestone, but do not implement it unless already requested.
+
+Preferred next milestone:
+Guided Master Scan prototype for answer key only.
+
+Why:
+- Lower risk than student batch scan.
+- Teacher only corrects the key once.
+- It reduces phone tapping.
+- It prepares fixed-template scanning.
+- It respects paper-first teacher behavior.
+
+The next milestone should include:
+- Master answer sheet template design
+- Camera/image capture
+- Crop/straighten
+- Detect marked answer positions from guided layout or template
+- Show detected key with confidence
+- Teacher confirm/edit
+- Save confirmed key
+
+But do not implement it in this task.
+
+==================================================
+PART 8 — GITHUB COMMIT REQUIREMENTS
+==================================================
+
+Commit all completed work to GitHub.
+
+Use a new branch if needed:
+feature/product-direction-master-scan-strategy
+
+Suggested commits:
+1. docs: define EthioGrade mobile grading lab vision
+2. docs: add workflow modes and master scan specification
+3. docs: add scanning strategy and template adoption plan
+4. docs: add answer sheet template plan and scanning roadmap
+5. docs: add mobile size budget and dependency guardrails
+6. chore: align navigation labels with product direction
+7. chore: isolate mock omr from production flow
+
+If some commits are not applicable, skip them and explain why.
+
+Final response must include:
+- Branch name
+- Commit hashes
+- GitHub remote URL
+- Push status
+- Files created/updated
+- Dependencies added or removed
+- Current app size risk assessment
+- Current app gaps against Quick Assessment
+- Current app gaps against Class Assessment
+- Current app gaps against Master Scan
+- Current app gaps against Student Scan
+- Recommended next technical milestone
+- Confirmation that no fake scanning was added
+- Confirmation that any mock OMR is isolated
+- Confirmation that the app still builds/typechecks

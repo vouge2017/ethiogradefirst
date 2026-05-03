@@ -61,7 +61,7 @@ export default function HomeScreen() {
         <View style={styles.headerTop}>
           <View>
             <Text style={[styles.appName, { color: colors.primary }]}>EthioGrade</Text>
-            <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>Offline Exam Grading</Text>
+            <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>Offline Grading Lab</Text>
           </View>
           <TouchableOpacity
             onPress={() => router.push('/setup')}

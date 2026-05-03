@@ -184,15 +184,27 @@ export default function GradingHubScreen() {
             <Feather name="arrow-right" size={18} color="#fff" />
           </TouchableOpacity>
 
-          {/* Scan — coming soon */}
+          {/* Master Scan — coming soon */}
           <View style={[styles.comingSoonBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}>
             <Feather name="camera" size={18} color={colors.mutedForeground} />
             <View style={styles.comingSoonText}>
-              <Text style={[styles.comingSoonTitle, { color: colors.mutedForeground }]}>Scan Answer Sheet</Text>
-              <Text style={[styles.comingSoonSub, { color: colors.mutedForeground }]}>Coming in v0.2 — not available yet</Text>
+              <Text style={[styles.comingSoonTitle, { color: colors.mutedForeground }]}>Master Scan — Set Key by Photo</Text>
+              <Text style={[styles.comingSoonSub, { color: colors.mutedForeground }]}>Scan your answer key sheet · Coming in v0.2</Text>
             </View>
             <View style={[styles.soonBadge, { backgroundColor: colors.border }]}>
-              <Text style={[styles.soonBadgeText, { color: colors.mutedForeground }]}>Soon</Text>
+              <Text style={[styles.soonBadgeText, { color: colors.mutedForeground }]}>v0.2</Text>
+            </View>
+          </View>
+
+          {/* Student Scan — coming soon */}
+          <View style={[styles.comingSoonBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}>
+            <Feather name="file-text" size={18} color={colors.mutedForeground} />
+            <View style={styles.comingSoonText}>
+              <Text style={[styles.comingSoonTitle, { color: colors.mutedForeground }]}>Student Scan — Scan Paper Sheets</Text>
+              <Text style={[styles.comingSoonSub, { color: colors.mutedForeground }]}>Scan student answer sheets · Coming in v0.3</Text>
+            </View>
+            <View style={[styles.soonBadge, { backgroundColor: colors.border }]}>
+              <Text style={[styles.soonBadgeText, { color: colors.mutedForeground }]}>v0.3</Text>
             </View>
           </View>
 
